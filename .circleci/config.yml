@@ -44,3 +44,4 @@ jobs:
         go build -i -o /tmp/prometheus_redis_ts_adapter main.go
     - store_artifacts:
         path: /tmp/prometheus_redis_ts_adapter
+        destination: prometheus_redis_ts_adapter
