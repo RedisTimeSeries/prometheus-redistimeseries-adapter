@@ -1,4 +1,4 @@
-package redis_ts
+package main
 
 import (
 	"flag"
@@ -7,8 +7,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/prometheus/prompb"
@@ -25,40 +23,8 @@ type config struct {
 	redisAuth     string
 	remoteTimeout time.Duration
 	listenAddr    string
-	telemetryPath string
 	logLevel      string
 }
-
-var (
-	receivedSamples = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "received_samples_total",
-			Help: "Total number of received samples.",
-		},
-	)
-	sentSamples = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "sent_samples_total",
-			Help: "Total number of processed samples sent to remote storage.",
-		},
-		[]string{"remote"},
-	)
-	failedSamples = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "failed_samples_total",
-			Help: "Total number of processed samples which failed on send to remote storage.",
-		},
-		[]string{"remote"},
-	)
-	sentBatchDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "sent_batch_duration_seconds",
-			Help:    "Duration of sample batch send calls to the remote storage.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"remote"},
-	)
-)
 
 func parseFlags() *config {
 	cfg := &config{
@@ -68,15 +34,15 @@ func parseFlags() *config {
 	flag.StringVar(&cfg.redisAddress, "redis-address", "localhost:6379",
 		"The host:port of the Redis server to send samples to. localhost:6379, if empty.",
 	)
-	flag.StringVar(&cfg.redisAuth, "redis-auth", "",
-		"The Redis authentication string. empty string, if empty.",
-	)
 	flag.DurationVar(&cfg.remoteTimeout, "send-timeout", 30*time.Second,
 		"The timeout to use when sending samples to the remote storage.",
 	)
-	flag.StringVar(&cfg.listenAddr, "web.listen-address", ":9201", "Address to listen on for web endpoints.")
-	flag.StringVar(&cfg.telemetryPath, "web.telemetry-path", "/metrics", "Address to listen on for web endpoints.")
-	flag.StringVar(&cfg.logLevel, "log.level", "debug", "Only log messages with the given severity or above. One of: [debug, info, warn, error]")
+	flag.StringVar(&cfg.listenAddr, "web.listen-address", "127.0.0.1:9201",
+		"Address to listen on for web endpoints.",
+	)
+	flag.StringVar(&cfg.logLevel, "log.level", "debug",
+		"Only log messages with the given severity or above. One of: [debug, info, warn, error]",
+	)
 
 	flag.Parse()
 
@@ -144,7 +110,6 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 		}
 
 		samples := protoToSamples(&req)
-		receivedSamples.Add(float64(len(samples)))
 
 		var wg sync.WaitGroup
 		for _, w := range writers {
@@ -213,16 +178,8 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 	return http.ListenAndServe(addr, nil)
 }
 
-func init() {
-	prometheus.MustRegister(receivedSamples)
-	prometheus.MustRegister(sentSamples)
-	prometheus.MustRegister(failedSamples)
-	prometheus.MustRegister(sentBatchDuration)
-}
-
 func main() {
 	cfg := parseFlags()
-	http.Handle(cfg.telemetryPath, promhttp.Handler())
 
 	logLevel := promlog.AllowedLevel{}
 	if err := logLevel.Set(cfg.logLevel); err != nil {
@@ -238,13 +195,8 @@ func main() {
 }
 
 func sendSamples(logger log.Logger, w writer, samples model.Samples) {
-	begin := time.Now()
 	err := w.Write(samples)
-	duration := time.Since(begin).Seconds()
 	if err != nil {
 		level.Warn(logger).Log("msg", "Error sending samples to remote storage", "err", err, "storage", w.Name(), "num_samples", len(samples))
-		failedSamples.WithLabelValues(w.Name()).Add(float64(len(samples)))
 	}
-	sentSamples.WithLabelValues(w.Name()).Add(float64(len(samples)))
-	sentBatchDuration.WithLabelValues(w.Name()).Observe(duration)
 }
