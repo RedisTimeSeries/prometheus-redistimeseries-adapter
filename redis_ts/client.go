@@ -30,7 +30,7 @@ func NewClient(logger log.Logger, redisAddress string, redisAuth string) *Client
 	}
 }
 
-// Write sends a batch of samples to InfluxDB via its HTTP API.
+// Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
 		v := float64(s.Value)

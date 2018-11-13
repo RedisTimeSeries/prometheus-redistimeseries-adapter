@@ -1,0 +1,40 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+    # specify the version
+    - image: circleci/golang:1.11
+
+    working_directory: /go/src/github.com/RedisLabs/prometheus-redis-ts-adapter
+    steps:
+    - checkout
+
+    # install redis
+    - run: git clone -b 5.0 --depth 1 https://github.com/antirez/redis.git
+    - run: cd redis && sudo make -j install
+
+    # install redis-timeseries
+    - run: git clone https://github.com/RedisLabsModules/redis-timeseries.git
+    - run: |
+        cd redis-timeseries
+        git submodule init
+        git submodule update
+        cd src
+        make -j all
+
+    # run redis with module
+    - run: |
+        redis-server --daemonize yes --loadmodule redis-timeseries/src/redis-tsdb-module.so
+        sleep 1
+
+    # install golang dependencies
+    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+    - run: dep ensure
+
+    #run tests with coverage
+    - run: |
+        go test -v -coverprofile=coverage.out
+        go tool cover -func=coverage.out
