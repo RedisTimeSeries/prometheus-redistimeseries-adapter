@@ -1,8 +1,9 @@
-package main
+package prometheus_redis_ts_adapter
 
 import (
 	"flag"
 	"fmt"
+	"github.com/RedisLabs/prometheus-redis-ts-adapter/redis_ts"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/golang/protobuf/proto"
@@ -31,8 +32,8 @@ func parseFlags() *config {
 		redisAuth: os.Getenv("REDIS_AUTH"),
 	}
 
-	flag.StringVar(&cfg.redisAddress, "redis-address", "localhost:6379",
-		"The host:port of the Redis server to send samples to. localhost:6379, if empty.",
+	flag.StringVar(&cfg.redisAddress, "redis-address", "",
+		"The host:port of the Redis server to send samples to. empty, if empty.",
 	)
 	flag.DurationVar(&cfg.remoteTimeout, "send-timeout", 30*time.Second,
 		"The timeout to use when sending samples to the remote storage.",
@@ -62,7 +63,14 @@ type reader interface {
 func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
-	// TODO: build redis client here
+	if cfg.redisAddress != "" {
+		c := redis_ts.NewClient(
+			log.With(logger, "storage", "RedisTS"),
+			cfg.redisAddress,
+			cfg.redisAuth)
+		writers = append(writers, c)
+	}
+	// TODO: build redis reader here
 	level.Info(logger).Log("msg", "Starting up...")
 	return writers, readers
 }
