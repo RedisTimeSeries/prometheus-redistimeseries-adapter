@@ -10,6 +10,14 @@
   revision = "d354974f6ae79e48def5955d42da569779528455"
 
 [[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "UT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:0594af97b2f4cec6554086eeace6597e20a4b69466eb4ada25adf9f4300dddd2"
   name = "github.com/garyburd/redigo"
   packages = [
@@ -105,6 +113,14 @@
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  pruneopts = "UT"
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:43c63eaac62e33cde3d02f406ae2885e03a39544856fdd52a2bce66bf29d3ce4"
   name = "github.com/prometheus/common"
@@ -122,6 +138,17 @@
   pruneopts = "UT"
   revision = "67dc912ac8b24f94a1fc478f352d25179c94ab9b"
   version = "v2.5.0"
+
+[[projects]]
+  digest = "1:c40d65817cdd41fac9aa7af8bed56927bb2d6d47e4fea566a74880f5c2b1c41e"
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require",
+  ]
+  pruneopts = "UT"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
   branch = "master"
@@ -221,6 +248,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/RedisLabs/redis-timeseries-go",
+    "github.com/garyburd/redigo/redis",
     "github.com/go-kit/kit/log",
     "github.com/go-kit/kit/log/level",
     "github.com/golang/protobuf/proto",
@@ -228,6 +256,7 @@
     "github.com/prometheus/common/model",
     "github.com/prometheus/common/promlog",
     "github.com/prometheus/prometheus/prompb",
+    "github.com/stretchr/testify/require",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
