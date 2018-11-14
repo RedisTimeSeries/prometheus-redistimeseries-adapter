@@ -1,2 +1,5 @@
 *
 !redis_ts
+!Makefile
+!Gopkg.lock
+!Gopkg.toml
