@@ -1,7 +1,8 @@
 FROM golang:1.11.1
 
+WORKDIR /go/src/github.com/RedisLabs/prometheus-redis-ts-adapter
 COPY * ./
 
-RUN go get
-RUN go build
+RUN make build
+RUN go test
 CMD ls -l

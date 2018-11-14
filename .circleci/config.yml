@@ -32,7 +32,7 @@ jobs:
 
     # install golang dependencies
     - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-    - run: dep ensure
+    - run: dep ensure -v
 
     #run tests with coverage
     - run: |
