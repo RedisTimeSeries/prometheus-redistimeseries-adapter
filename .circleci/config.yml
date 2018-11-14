@@ -27,7 +27,7 @@ jobs:
 
     # run redis with module
     - run: |
-        redis-server --daemonize yes --loadmodule redis-timeseries/src/redis-tsdb-module.so
+        redis-server --daemonize yes --loadmodule redis-timeseries/src/redis-tsdb-module.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360
         sleep 1
 
     # install golang dependencies

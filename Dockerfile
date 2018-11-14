@@ -24,7 +24,5 @@ RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 RUN $GOPATH/bin/dep ensure
 
 # Run Redis with TS module, then run tests
-CMD redis-server --daemonize yes --loadmodule /redis/redis-timeseries/src/redis-tsdb-module.so && \
-    go test -v -coverprofile=coverage.out github.com/RedisLabs/prometheus-redis-ts-adapter/redis_ts # && \
-    #go tool cover -func=coverage.out && \
-    #bash  # uncomment to make the container not close after finishing running the tests
+CMD redis-server --daemonize yes --loadmodule /redis/redis-timeseries/src/redis-tsdb-module.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360 && \
+    go test -v -coverprofile=coverage.out github.com/RedisLabs/prometheus-redis-ts-adapter/redis_ts
