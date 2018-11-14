@@ -3,3 +3,4 @@
 !Makefile
 !Gopkg.lock
 !Gopkg.toml
+!vendor

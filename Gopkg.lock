@@ -2,6 +2,25 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:92cfea62b11c61143d1d56088f06ecd7eaa31119d21bd879e4eabfa04b9e02e2"
+  name = "github.com/RedisLabs/redis-timeseries-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d354974f6ae79e48def5955d42da569779528455"
+
+[[projects]]
+  digest = "1:0594af97b2f4cec6554086eeace6597e20a4b69466eb4ada25adf9f4300dddd2"
+  name = "github.com/garyburd/redigo"
+  packages = [
+    "internal",
+    "redis",
+  ]
+  pruneopts = "UT"
+  revision = "a69d19351219b6dd56f274f96d85a7014a2ec34e"
+  version = "v1.6.0"
+
+[[projects]]
   digest = "1:ce058ca1b1787a997e578c4344f9650becb5086a3512332cbedffca9950d77a1"
   name = "github.com/go-kit/kit"
   packages = [
@@ -201,6 +220,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/RedisLabs/redis-timeseries-go",
     "github.com/go-kit/kit/log",
     "github.com/go-kit/kit/log/level",
     "github.com/golang/protobuf/proto",
