@@ -1,4 +1,4 @@
-package prometheus_redis_ts_adapter
+package main
 
 import (
 	"flag"
@@ -64,6 +64,7 @@ func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
 	if cfg.redisAddress != "" {
+		level.Info(logger).Log("redis_ts_address", cfg.redisAddress)
 		c := redis_ts.NewClient(
 			log.With(logger, "storage", "RedisTS"),
 			cfg.redisAddress,
@@ -196,6 +197,7 @@ func main() {
 	logger := promlog.New(logLevel)
 
 	writers, readers := buildClients(logger, cfg)
+	level.Info(logger).Log("listening_address", cfg.listenAddr)
 	if err := serve(logger, cfg.listenAddr, writers, readers); err != nil {
 		level.Error(logger).Log("msg", "Failed to listen", "addr", cfg.listenAddr, "err", err)
 		os.Exit(1)
