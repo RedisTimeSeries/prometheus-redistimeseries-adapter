@@ -2,10 +2,6 @@ FROM golang:1.11.1
 
 ENV GOPATH /go_ts
 
-WORKDIR /go_ts/src/github.com/RedisLabs/prometheus-redis-ts-adapter
-COPY . .
-RUN mkdir -p $GOPATH/bin $GOPATH/pkg
-
 # Build and install redis-server
 RUN git clone -b 5.0 --depth 1 https://github.com/antirez/redis.git /redis
 RUN cd /redis && make -j install
@@ -18,6 +14,10 @@ RUN cd /redis/redis-timeseries && \
     git submodule update && \
     cd src && \
     make -j all
+
+WORKDIR /go_ts/src/github.com/RedisLabs/prometheus-redis-ts-adapter
+COPY . .
+RUN mkdir -p $GOPATH/bin $GOPATH/pkg
 
 # Satisfy dependencies
 RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh

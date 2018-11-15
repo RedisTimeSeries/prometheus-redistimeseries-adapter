@@ -3,11 +3,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:92cfea62b11c61143d1d56088f06ecd7eaa31119d21bd879e4eabfa04b9e02e2"
+  digest = "1:d30fdbbbfe46a2883d2ad13c5498edb277256fd38285e379f8a6ed0f1c3909a9"
   name = "github.com/RedisLabs/redis-timeseries-go"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d354974f6ae79e48def5955d42da569779528455"
+  revision = "d567a1d0b5fc0c23afcf9e4f14af7bac276ee1b8"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
