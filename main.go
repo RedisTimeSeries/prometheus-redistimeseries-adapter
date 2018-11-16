@@ -3,6 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/RedisLabs/prometheus-redis-ts-adapter/redis_ts"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -11,16 +17,10 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/prometheus/prompb"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"sync"
-	"time"
 )
 
 type config struct {
 	redisAddress  string
-	redisPort     int
 	redisAuth     string
 	remoteTimeout time.Duration
 	listenAddr    string
@@ -64,7 +64,7 @@ func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
 	if cfg.redisAddress != "" {
-		level.Info(logger).Log("redis_ts_address", cfg.redisAddress)
+		_ = level.Info(logger).Log("redis_ts_address", cfg.redisAddress)
 		c := redis_ts.NewClient(
 			log.With(logger, "storage", "RedisTS"),
 			cfg.redisAddress,
@@ -72,7 +72,7 @@ func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 		writers = append(writers, c)
 	}
 	// TODO: build redis reader here
-	level.Info(logger).Log("msg", "Starting up...")
+	_ = level.Info(logger).Log("msg", "Starting up...")
 	return writers, readers
 }
 
@@ -99,21 +99,21 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 	http.HandleFunc("/write", func(w http.ResponseWriter, r *http.Request) {
 		compressed, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			level.Error(logger).Log("msg", "Read error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Read error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		reqBuf, err := snappy.Decode(nil, compressed)
 		if err != nil {
-			level.Error(logger).Log("msg", "Decode error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Decode error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		var req prompb.WriteRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
-			level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -134,21 +134,21 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 	http.HandleFunc("/read", func(w http.ResponseWriter, r *http.Request) {
 		compressed, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			level.Error(logger).Log("msg", "Read error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Read error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		reqBuf, err := snappy.Decode(nil, compressed)
 		if err != nil {
-			level.Error(logger).Log("msg", "Decode error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Decode error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		var req prompb.ReadRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
-			level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
+			_ = level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -163,7 +163,7 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 		var resp *prompb.ReadResponse
 		resp, err = reader.Read(&req)
 		if err != nil {
-			level.Warn(logger).Log("msg", "Error executing query", "query", req, "storage", reader.Name(), "err", err)
+			_ = level.Warn(logger).Log("msg", "Error executing query", "query", req, "storage", reader.Name(), "err", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -197,9 +197,9 @@ func main() {
 	logger := promlog.New(logLevel)
 
 	writers, readers := buildClients(logger, cfg)
-	level.Info(logger).Log("listening_address", cfg.listenAddr)
+	_ = level.Info(logger).Log("listening_address", cfg.listenAddr)
 	if err := serve(logger, cfg.listenAddr, writers, readers); err != nil {
-		level.Error(logger).Log("msg", "Failed to listen", "addr", cfg.listenAddr, "err", err)
+		_ = level.Error(logger).Log("msg", "Failed to listen", "addr", cfg.listenAddr, "err", err)
 		os.Exit(1)
 	}
 }
@@ -207,6 +207,6 @@ func main() {
 func sendSamples(logger log.Logger, w writer, samples model.Samples) {
 	err := w.Write(samples)
 	if err != nil {
-		level.Warn(logger).Log("msg", "Error sending samples to remote storage", "err", err, "storage", w.Name(), "num_samples", len(samples))
+		_ = level.Warn(logger).Log("msg", "Error sending samples to remote storage", "err", err, "storage", w.Name(), "num_samples", len(samples))
 	}
 }

@@ -1,22 +1,27 @@
 package redis_ts
 
 import (
+	"testing"
+
 	"github.com/RedisLabs/redis-timeseries-go"
 	"github.com/garyburd/redigo/redis"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const redisAddress = "127.0.0.1:6379"
 
 var redisTS = redis_timeseries_go.NewClient(redisAddress, "noname")
 
+func cleanup(conn redis.Conn) {
+	_, _ = conn.Do("FLUSHALL")
+}
+
 func TestWriteSingleSample(t *testing.T) {
 	conn, err := redis.Dial("tcp", redisAddress)
 	require.Nil(t, err, "Could not connect to Redis")
 	defer conn.Close()
-	defer conn.Do("FLUSHALL")
+	defer cleanup(conn)
 
 	now := model.Now()
 	answerToLifeTheUniverse := 42.1
@@ -47,8 +52,8 @@ func TestWriteSingleSample(t *testing.T) {
 	require.Equal(t,
 		redis_timeseries_go.DataPoint{
 			Timestamp: now.Unix(),
-			Value: answerToLifeTheUniverse,
+			Value:     answerToLifeTheUniverse,
 		},
-		dp,"Unexpected sample in Redis",
+		dp, "Unexpected sample in Redis",
 	)
 }

@@ -2,12 +2,13 @@ package redis_ts
 
 import (
 	"fmt"
+	"math"
+	"strings"
+
 	"github.com/RedisLabs/redis-timeseries-go"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/common/model"
-	"math"
-	"strings"
 )
 
 // Client allows sending batches of Prometheus samples to Redis TS.
@@ -26,9 +27,8 @@ func NewClient(logger log.Logger, redisAddress string, redisAuth string) *Client
 	}
 
 	return &Client{
-		logger:          logger,
-		client:          *c,
-
+		logger: logger,
+		client: *c,
 	}
 }
 
@@ -42,7 +42,7 @@ func (c *Client) Write(samples model.Samples) error {
 
 		v := float64(s.Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
+			_ = level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
 			continue
 		}
 
@@ -69,7 +69,6 @@ func metricToKeyName(m model.Metric) string {
 
 	return strings.Join(labels, ":")
 }
-
 
 // Name identifies the client as an RedisTS client.
 func (c Client) Name() string {
