@@ -30,18 +30,13 @@ jobs:
         redis-server --daemonize yes --loadmodule redis-timeseries/src/redis-tsdb-module.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360
         sleep 1
 
-    # install golang dependencies
-    - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-    - run: dep ensure -v
-
-    #run tests with coverage
-    - run: |
-        go test -v -coverprofile=coverage.out github.com/RedisLabs/prometheus-redis-ts-adapter/redis_ts
-        go tool cover -func=coverage.out
+    # run tests and lint
+    - run: make test
+    - run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sudo bash -s -- -b $GOPATH/bin v1.11.1
+    - run: make lint
 
     #run build and store artifact
-    - run: |
-        go build -i -o /tmp/prometheus_redis_ts_adapter main.go
+    - run: make build
     - store_artifacts:
         path: /tmp/prometheus_redis_ts_adapter
         destination: prometheus_redis_ts_adapter

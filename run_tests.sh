@@ -1,1 +1,0 @@
-docker build -t redis_ts_adapter . && docker run --rm -it redis_ts_adapter
