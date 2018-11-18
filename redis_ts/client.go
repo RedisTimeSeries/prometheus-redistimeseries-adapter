@@ -1,11 +1,13 @@
 package redis_ts
 
 import (
+	"fmt"
 	"github.com/RedisLabs/redis-timeseries-go"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/common/model"
 	"math"
+	"strings"
 )
 
 // Client allows sending batches of Prometheus samples to Redis TS.
@@ -33,18 +35,39 @@ func NewClient(logger log.Logger, redisAddress string, redisAuth string) *Client
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
+		_, exists := s.Metric[model.MetricNameLabel]
+		if !exists {
+			level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
+		}
+
 		v := float64(s.Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
 			level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
 			continue
 		}
 
-		err := c.client.Add(string(s.Metric[model.MetricNameLabel]), s.Timestamp.Unix(),v)
+		err := c.client.Add(metricToKeyName(s.Metric), s.Timestamp.Unix(), v)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Until Redis TSDB supports tagging, we handle labels by making them part of the TS key.
+// The form is: <metric_name>[:<tag>=<value>][:<tag>=<value>]...
+func metricToKeyName(m model.Metric) string {
+	labels := make([]string, 0, len(m))
+
+	labels = append(labels, string(m[model.MetricNameLabel]))
+
+	for label, value := range m {
+		if label != model.MetricNameLabel {
+			labels = append(labels, fmt.Sprintf("%s=%s", label, value))
+		}
+	}
+
+	return strings.Join(labels, ":")
 }
 
 

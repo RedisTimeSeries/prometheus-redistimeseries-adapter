@@ -19,14 +19,12 @@ func TestWriteSingleSample(t *testing.T) {
 	defer conn.Do("FLUSHALL")
 
 	now := model.Now()
-	answerToLifeTheUniverse := 42.0
-
-	var seriesName model.LabelValue = "test_series"
+	answerToLifeTheUniverse := 42.1
 
 	samples := model.Samples{
 		&model.Sample{
 			Metric: model.Metric{
-				model.MetricNameLabel: seriesName,
+				model.MetricNameLabel: "test_series",
 				"label_1":             "value_1",
 				"label_2":             "value_2",
 			},
@@ -40,7 +38,9 @@ func TestWriteSingleSample(t *testing.T) {
 	err = remoteClient.Write(samples)
 	require.Nil(t, err, "Write of samples failed")
 
-	dataPoints, err := redisTS.Range(string(seriesName), 0, now.Unix())
+	keyName := metricToKeyName(samples[0].Metric)
+
+	dataPoints, err := redisTS.Range(keyName, 0, now.Unix())
 	require.Nil(t, err, "Failed getting samples from Redis")
 	require.Len(t, dataPoints, 1, "Incorrect number of samples in Redis")
 	dp := dataPoints[0]
