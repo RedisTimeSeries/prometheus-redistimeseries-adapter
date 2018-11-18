@@ -37,7 +37,7 @@ func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
 		_, exists := s.Metric[model.MetricNameLabel]
 		if !exists {
-			level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
+			_ = level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
 		}
 
 		v := float64(s.Value)
