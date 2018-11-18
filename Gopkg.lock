@@ -85,6 +85,17 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:38ec74012390146c45af1f92d46e5382b50531247929ff3a685d2b2be65155ac"
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis",
+  ]
+  pruneopts = "UT"
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
+
+[[projects]]
   digest = "1:3cbc83a159e161c6cf3e64590ae19da29069ecd8d92f9400ab6fda15e93cbc5f"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
@@ -248,11 +259,11 @@
   analyzer-version = 1
   input-imports = [
     "github.com/RedisLabs/redis-timeseries-go",
-    "github.com/garyburd/redigo/redis",
     "github.com/go-kit/kit/log",
     "github.com/go-kit/kit/log/level",
     "github.com/golang/protobuf/proto",
     "github.com/golang/snappy",
+    "github.com/gomodule/redigo/redis",
     "github.com/prometheus/common/model",
     "github.com/prometheus/common/promlog",
     "github.com/prometheus/prometheus/prompb",

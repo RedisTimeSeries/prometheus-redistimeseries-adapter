@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/RedisLabs/redis-timeseries-go"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 )
