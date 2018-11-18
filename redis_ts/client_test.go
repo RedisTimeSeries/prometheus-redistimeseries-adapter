@@ -6,7 +6,7 @@ import (
 	"github.com/RedisLabs/redis-timeseries-go"
 	"github.com/gomodule/redigo/redis"
 	"github.com/prometheus/common/model"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 const redisAddress = "127.0.0.1:6379"
@@ -19,7 +19,7 @@ func cleanup(conn redis.Conn) {
 
 func TestWriteSingleSample(t *testing.T) {
 	conn, err := redis.Dial("tcp", redisAddress)
-	require.Nil(t, err, "Could not connect to Redis")
+	assert.Nil(t, err, "Could not connect to Redis")
 	defer conn.Close()
 	defer cleanup(conn)
 
@@ -41,15 +41,15 @@ func TestWriteSingleSample(t *testing.T) {
 	var remoteClient = NewClient(nil, redisAddress, "")
 
 	err = remoteClient.Write(samples)
-	require.Nil(t, err, "Write of samples failed")
+	assert.Nil(t, err, "Write of samples failed")
 
 	keyName := metricToKeyName(samples[0].Metric)
 
 	dataPoints, err := redisTS.Range(keyName, 0, now.Unix())
-	require.Nil(t, err, "Failed getting samples from Redis")
-	require.Len(t, dataPoints, 1, "Incorrect number of samples in Redis")
+	assert.Nil(t, err, "Failed getting samples from Redis")
+	assert.Len(t, dataPoints, 1, "Incorrect number of samples in Redis")
 	dp := dataPoints[0]
-	require.Equal(t,
+	assert.Equal(t,
 		redis_timeseries_go.DataPoint{
 			Timestamp: now.Unix(),
 			Value:     answerToLifeTheUniverse,

@@ -151,12 +151,9 @@
   version = "v2.5.0"
 
 [[projects]]
-  digest = "1:c40d65817cdd41fac9aa7af8bed56927bb2d6d47e4fea566a74880f5c2b1c41e"
+  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
   name = "github.com/stretchr/testify"
-  packages = [
-    "assert",
-    "require",
-  ]
+  packages = ["assert"]
   pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
@@ -267,7 +264,7 @@
     "github.com/prometheus/common/model",
     "github.com/prometheus/common/promlog",
     "github.com/prometheus/prometheus/prompb",
-    "github.com/stretchr/testify/require",
+    "github.com/stretchr/testify/assert",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
