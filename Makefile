@@ -6,7 +6,7 @@ DOCKER_BUILDER = redislabs/adapter-builder
 BIN_PATH = $(BINDIR)/prometheus_redis_ts_adapter
 
 build:
-	CGO_ENABLED=0 go build -o $(BIN_PATH)
+	CGO_ENABLED=0 go build -o $(BIN_PATH) ./cmd/prometheus-redis-ts-adapter
 
 docker_build_image:
 	docker build -t $(DOCKER_BUILDER) -f build/Builder.Dockerfile build/
