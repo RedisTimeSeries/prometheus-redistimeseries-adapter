@@ -6,48 +6,45 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/RedisLabs/redis-timeseries-go"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	"github.com/go-redis/redis"
 	"github.com/prometheus/common/model"
 )
 
-// Client allows sending batches of Prometheus samples to Redis TS.
-type Client struct {
-	logger log.Logger
-
-	client redis_timeseries_go.Client
-}
+type Client redis.Client
+type StatusCmd redis.StatusCmd
 
 // NewClient creates a new Client.
-func NewClient(logger log.Logger, redisAddress string, redisAuth string) *Client {
-	c := redis_timeseries_go.NewClient(redisAddress, "redis_ts_adapter")
+func NewClient(address string, auth string) *Client {
+	client := redis.NewClient(&redis.Options{
+		Addr:     address,
+		Password: auth,
+		DB:       0, // use default DB
+	})
+	myClient := Client(*client)
+	return &myClient
+}
 
-	if logger == nil {
-		logger = log.NewNopLogger()
-	}
-
-	return &Client{
-		logger: logger,
-		client: *c,
-	}
+func (c *Client) Add(key string, timestamp int64, value float64) *redis.StatusCmd {
+	cmd := redis.NewStatusCmd("TS.ADD", key, timestamp, value)
+	_ = c.Process(cmd)
+	return cmd
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
-		_, exists := s.Metric[model.MetricNameLabel]
-		if !exists {
-			_ = level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
-		}
+		// _, exists := s.Metric[model.MetricNameLabel]
+		// if !exists {
+		// 	// _ = level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
+		// }
 
 		v := float64(s.Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			_ = level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
+			// _ = level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
 			continue
 		}
 
-		err := c.client.Add(metricToKeyName(s.Metric), s.Timestamp.Unix(), v)
+		err := c.Add(metricToKeyName(s.Metric), s.Timestamp.Unix(), v).Err()
 		if err != nil {
 			return err
 		}
