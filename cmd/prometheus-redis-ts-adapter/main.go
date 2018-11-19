@@ -66,7 +66,6 @@ func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 	if cfg.redisAddress != "" {
 		_ = level.Info(logger).Log("redis_ts_address", cfg.redisAddress)
 		c := redis_ts.NewClient(
-			log.With(logger, "storage", "RedisTS"),
 			cfg.redisAddress,
 			cfg.redisAuth)
 		writers = append(writers, c)
@@ -194,7 +193,7 @@ func main() {
 	if err := logLevel.Set(cfg.logLevel); err != nil {
 		panic(fmt.Sprintf("Error setting log level: %v", err))
 	}
-	logger := promlog.New(logLevel)
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 
 	writers, readers := buildClients(logger, cfg)
 	_ = level.Info(logger).Log("listening_address", cfg.listenAddr)

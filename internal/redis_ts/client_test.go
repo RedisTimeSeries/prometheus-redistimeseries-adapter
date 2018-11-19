@@ -3,18 +3,22 @@ package redis_ts
 import (
 	"testing"
 
-	"github.com/RedisLabs/redis-timeseries-go"
-	"github.com/gomodule/redigo/redis"
+	"github.com/go-redis/redis"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 )
 
 const redisAddress = "127.0.0.1:6379"
+const redisAuth = ""
 
-var redisTS = redis_timeseries_go.NewClient(redisAddress, "noname")
+var redisClient = redis.NewClient(&redis.Options{
+	Addr:     "localhost:6379",
+	Password: redisAuth, // no password set
+	DB:       0,         // use default DB
+})
 
-func cleanup(conn redis.Conn) {
-	_, _ = conn.Do("FLUSHALL")
+func cleanup(client redis.Client) {
+	_ = client.FlushAll()
 }
 
 func Test_MetricToKeyName(t *testing.T) {
@@ -30,11 +34,7 @@ func Test_MetricToKeyName(t *testing.T) {
 }
 
 func TestWriteSingleSample(t *testing.T) {
-	conn, err := redis.Dial("tcp", redisAddress)
-	assert.Nil(t, err, "Could not connect to Redis")
-	defer conn.Close()
-	defer cleanup(conn)
-
+	defer cleanup(*redisClient)
 	now := model.Now()
 	answerToLifeTheUniverse := 42.1
 
@@ -50,22 +50,11 @@ func TestWriteSingleSample(t *testing.T) {
 		},
 	}
 
-	var remoteClient = NewClient(nil, redisAddress, "")
+	var redisTsClient = NewClient(redisAddress, redisAuth)
 
-	err = remoteClient.Write(samples)
+	err := redisTsClient.Write(samples)
 	assert.Nil(t, err, "Write of samples failed")
 
-	keyName := metricToKeyName(samples[0].Metric)
-
-	dataPoints, err := redisTS.Range(keyName, 0, now.Unix())
-	assert.Nil(t, err, "Failed getting samples from Redis")
-	assert.Len(t, dataPoints, 1, "Incorrect number of samples in Redis")
-	dp := dataPoints[0]
-	assert.Equal(t,
-		redis_timeseries_go.DataPoint{
-			Timestamp: now.Unix(),
-			Value:     answerToLifeTheUniverse,
-		},
-		dp, "Unexpected sample in Redis",
-	)
+	keys := redisClient.Keys("test_series{label_1=\"value_1\",label_2=\"value_2\"}").Val()
+	assert.Len(t, keys, 1)
 }
