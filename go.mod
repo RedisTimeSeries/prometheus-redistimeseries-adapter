@@ -1,4 +1,4 @@
-module github.com/RedisLabs/prometheus-redis-ts-adapter
+module github.com/RedisLabs/redis-ts-adapter
 
 require (
 	github.com/go-redis/redis v6.14.2+incompatible
