@@ -56,7 +56,7 @@ func (c *Client) Write(samples model.Samples) error {
 }
 
 // Until Redis TSDB supports tagging, we handle labels by making them part of the TS key.
-// The form is: <metric_name>[,<tag>=<value>...]
+// The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
 func metricToKeyName(m model.Metric) (keyName string) {
 	keyName = ""
 	labels := make([]string, 0, len(m))
