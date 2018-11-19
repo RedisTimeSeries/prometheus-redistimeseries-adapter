@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/prometheus/common/model"
+	log "github.com/sirupsen/logrus"
 )
 
 type Client redis.Client
@@ -33,14 +34,14 @@ func (c *Client) Add(key string, timestamp int64, value float64) *redis.StatusCm
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
-		// _, exists := s.Metric[model.MetricNameLabel]
-		// if !exists {
-		// 	// _ = level.Debug(c.logger).Log("msg", "cannot send unnamed sample to RedisTS, skipping", "sample", s)
-		// }
+		_, exists := s.Metric[model.MetricNameLabel]
+		if !exists {
+			log.WithFields(log.Fields{"sample": s}).Info("Cannot send unnamed sample to RedisTS, skipping")
+		}
 
 		v := float64(s.Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			// _ = level.Debug(c.logger).Log("msg", "cannot send to RedisTS, skipping sample", "value", v, "sample", s)
+			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
 			continue
 		}
 

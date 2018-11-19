@@ -10,14 +10,17 @@ import (
 	"time"
 
 	"github.com/RedisLabs/prometheus-redis-ts-adapter/internal/redis_ts"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/prometheus/prompb"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetOutput(os.Stdout)
+}
 
 type config struct {
 	redisAddress  string
@@ -60,18 +63,18 @@ type reader interface {
 	Name() string
 }
 
-func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
+func buildClients(cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
 	if cfg.redisAddress != "" {
-		_ = level.Info(logger).Log("redis_ts_address", cfg.redisAddress)
+		log.WithFields(log.Fields{"redis_ts_address": cfg.redisAddress}).Info()
 		c := redis_ts.NewClient(
 			cfg.redisAddress,
 			cfg.redisAuth)
 		writers = append(writers, c)
 	}
 	// TODO: build redis reader here
-	_ = level.Info(logger).Log("msg", "Starting up...")
+	log.Info("Starting up...")
 	return writers, readers
 }
 
@@ -94,25 +97,25 @@ func protoToSamples(req *prompb.WriteRequest) model.Samples {
 	return samples
 }
 
-func serve(logger log.Logger, addr string, writers []writer, readers []reader) error {
+func serve(addr string, writers []writer, readers []reader) error {
 	http.HandleFunc("/write", func(w http.ResponseWriter, r *http.Request) {
 		compressed, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "Read error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Read error")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		reqBuf, err := snappy.Decode(nil, compressed)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "Decode error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Decode error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		var req prompb.WriteRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
-			_ = level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Unmarshal error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -123,7 +126,7 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 		for _, w := range writers {
 			wg.Add(1)
 			go func(rw writer) {
-				sendSamples(logger, rw, samples)
+				sendSamples(rw, samples)
 				wg.Done()
 			}(w)
 		}
@@ -133,21 +136,21 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 	http.HandleFunc("/read", func(w http.ResponseWriter, r *http.Request) {
 		compressed, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "Read error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Read error")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		reqBuf, err := snappy.Decode(nil, compressed)
 		if err != nil {
-			_ = level.Error(logger).Log("msg", "Decode error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Decode error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		var req prompb.ReadRequest
 		if err := proto.Unmarshal(reqBuf, &req); err != nil {
-			_ = level.Error(logger).Log("msg", "Unmarshal error", "err", err.Error())
+			log.WithFields(log.Fields{"err": err.Error()}).Error("Unmarshal error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -162,7 +165,7 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 		var resp *prompb.ReadResponse
 		resp, err = reader.Read(&req)
 		if err != nil {
-			_ = level.Warn(logger).Log("msg", "Error executing query", "query", req, "storage", reader.Name(), "err", err)
+			log.WithFields(log.Fields{"query": req, "storage": reader.Name(), "err": err}).Error("Error executing query")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -189,23 +192,23 @@ func serve(logger log.Logger, addr string, writers []writer, readers []reader) e
 func main() {
 	cfg := parseFlags()
 
-	logLevel := promlog.AllowedLevel{}
-	if err := logLevel.Set(cfg.logLevel); err != nil {
+	level, err := log.ParseLevel(cfg.logLevel)
+	if err != nil {
 		panic(fmt.Sprintf("Error setting log level: %v", err))
 	}
-	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	log.SetLevel(level)
 
-	writers, readers := buildClients(logger, cfg)
-	_ = level.Info(logger).Log("listening_address", cfg.listenAddr)
-	if err := serve(logger, cfg.listenAddr, writers, readers); err != nil {
-		_ = level.Error(logger).Log("msg", "Failed to listen", "addr", cfg.listenAddr, "err", err)
+	writers, readers := buildClients(cfg)
+	log.WithFields(log.Fields{"address": cfg.listenAddr}).Info("listening...")
+	if err := serve(cfg.listenAddr, writers, readers); err != nil {
+		log.WithFields(log.Fields{"address": cfg.listenAddr, "err": err}).Error("Failed to listen")
 		os.Exit(1)
 	}
 }
 
-func sendSamples(logger log.Logger, w writer, samples model.Samples) {
+func sendSamples(w writer, samples model.Samples) {
 	err := w.Write(samples)
 	if err != nil {
-		_ = level.Warn(logger).Log("msg", "Error sending samples to remote storage", "err", err, "storage", w.Name(), "num_samples", len(samples))
+		log.WithFields(log.Fields{"storage": w.Name(), "err": err, "num_samples": len(samples)}).Warn("Could not send samples to remote storage")
 	}
 }
