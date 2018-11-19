@@ -1,12 +1,12 @@
 BINDIR  ?= bin
-SRC_PKG = github.com/RedisLabs/prometheus-redis-ts-adapter
-DOCKER_IMAGE ?= redislabs/prometheus-redis-ts-adapter
+SRC_PKG = github.com/RedisLabs/redis-ts-adapter
+DOCKER_IMAGE ?= redislabs/redis-ts-adapter
 DOCKER_IMAGE_TAG ?= beta
 DOCKER_BUILDER = redislabs/adapter-builder
-BIN_PATH = $(BINDIR)/prometheus_redis_ts_adapter
+BIN_PATH = $(BINDIR)/redis_ts_adapter
 
 build:
-	CGO_ENABLED=0 go build -o $(BIN_PATH) ./cmd/prometheus-redis-ts-adapter
+	CGO_ENABLED=0 go build -o $(BIN_PATH) ./cmd/redis-ts-adapter
 
 docker_build_image:
 	docker build -t $(DOCKER_BUILDER) -f build/Builder.Dockerfile build/

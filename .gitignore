@@ -14,4 +14,4 @@
 .idea
 .DS_Store
 bin/*
-build/prometheus_redis_ts_adapter
+build/redis_ts_adapter

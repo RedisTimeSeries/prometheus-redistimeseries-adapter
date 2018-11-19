@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/RedisLabs/prometheus-redis-ts-adapter/internal/redis_ts"
+	"github.com/RedisLabs/redis-ts-adapter/internal/redis_ts"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/common/model"
