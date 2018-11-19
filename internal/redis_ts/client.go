@@ -3,6 +3,7 @@ package redis_ts
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/RedisLabs/redis-timeseries-go"
@@ -55,19 +56,21 @@ func (c *Client) Write(samples model.Samples) error {
 }
 
 // Until Redis TSDB supports tagging, we handle labels by making them part of the TS key.
-// The form is: <metric_name>[:<tag>=<value>][:<tag>=<value>]...
-func metricToKeyName(m model.Metric) string {
+// The form is: <metric_name>[,<tag>=<value>...]
+func metricToKeyName(m model.Metric) (keyName string) {
+	keyName = ""
 	labels := make([]string, 0, len(m))
-
-	labels = append(labels, string(m[model.MetricNameLabel]))
 
 	for label, value := range m {
 		if label != model.MetricNameLabel {
-			labels = append(labels, fmt.Sprintf("%s=%s", label, value))
+			labels = append(labels, fmt.Sprintf("%s=\"%s\"", label, value))
+		} else {
+			keyName = string(value)
 		}
 	}
-
-	return strings.Join(labels, ":")
+	sort.Strings(labels)
+	keyName += "{" + strings.Join(labels, ",") + "}"
+	return keyName
 }
 
 // Name identifies the client as an RedisTS client.

@@ -17,6 +17,18 @@ func cleanup(conn redis.Conn) {
 	_, _ = conn.Do("FLUSHALL")
 }
 
+func Test_MetricToKeyName(t *testing.T) {
+	metric := model.Metric{
+		model.MetricNameLabel:      "the_twist",
+		"Z_should_be_last":         "42",
+		"A_should_be_first":        "falafel",
+		"U_are_so_beautiful_to_me": "sugar",
+	}
+	keyName := metricToKeyName(metric)
+	expected := "the_twist{A_should_be_first=\"falafel\",U_are_so_beautiful_to_me=\"sugar\",Z_should_be_last=\"42\"}"
+	assert.Equal(t, expected, keyName)
+}
+
 func TestWriteSingleSample(t *testing.T) {
 	conn, err := redis.Dial("tcp", redisAddress)
 	assert.Nil(t, err, "Could not connect to Redis")
