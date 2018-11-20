@@ -17,11 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func init() {
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
-	log.SetOutput(os.Stdout)
-}
-
 type config struct {
 	redisAddress  string
 	redisAuth     string
@@ -30,10 +25,15 @@ type config struct {
 	logLevel      string
 }
 
-func parseFlags() *config {
-	cfg := &config{
-		redisAuth: os.Getenv("REDIS_AUTH"),
-	}
+var cfg = &config{}
+
+func init() {
+	parseFlags()
+	setupLogger()
+}
+
+func parseFlags() {
+	cfg.redisAuth = os.Getenv("REDIS_AUTH")
 
 	flag.StringVar(&cfg.redisAddress, "redis-address", "",
 		"The host:port of the Redis server to send samples to. empty, if empty.",
@@ -49,8 +49,18 @@ func parseFlags() *config {
 	)
 
 	flag.Parse()
+}
 
-	return cfg
+func setupLogger() {
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetOutput(os.Stdout)
+
+	level, err := log.ParseLevel(cfg.logLevel)
+	if err != nil {
+		log.WithFields(log.Fields{"wantedLogLevel": cfg.logLevel}).Warn("Could not set log level. Reverting to info log level.")
+		level = log.InfoLevel
+	}
+	log.SetLevel(level)
 }
 
 type writer interface {
@@ -190,15 +200,6 @@ func serve(addr string, writers []writer, readers []reader) error {
 }
 
 func main() {
-	cfg := parseFlags()
-
-	level, err := log.ParseLevel(cfg.logLevel)
-	if err != nil {
-		log.WithFields(log.Fields{"wantedLogLevel": cfg.logLevel}).Warn("Could not set log level. Reverting to info log level.")
-		level = log.InfoLevel
-	}
-	log.SetLevel(level)
-
 	writers, readers := buildClients(cfg)
 	log.WithFields(log.Fields{"address": cfg.listenAddr}).Info("listening...")
 	if err := serve(cfg.listenAddr, writers, readers); err != nil {
