@@ -21,8 +21,7 @@ func NewClient(address string, auth string) *Client {
 		Password: auth,
 		DB:       0, // use default DB
 	})
-	myClient := Client(*client)
-	return &myClient
+	return (*Client)(client)
 }
 
 func (c *Client) Add(key string, timestamp int64, value float64) *redis.StatusCmd {
