@@ -194,7 +194,8 @@ func main() {
 
 	level, err := log.ParseLevel(cfg.logLevel)
 	if err != nil {
-		panic(fmt.Sprintf("Error setting log level: %v", err))
+		log.WithFields(log.Fields{"wantedLogLevel": cfg.logLevel}).Warn("Could not set log level. Reverting to info log level.")
+		level = log.InfoLevel
 	}
 	log.SetLevel(level)
 
