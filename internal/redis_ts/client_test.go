@@ -10,6 +10,8 @@ import (
 
 const redisAddress = "127.0.0.1:6379"
 const redisAuth = ""
+const sentinelAddress = "127.0.0.1:26379"
+const sentinelMasterName = "mymaster"
 
 var redisClient = redis.NewClient(&redis.Options{
 	Addr:     "localhost:6379",
@@ -57,4 +59,12 @@ func TestWriteSingleSample(t *testing.T) {
 
 	keys := redisClient.Keys("test_series{label_1=\"value_1\",label_2=\"value_2\"}").Val()
 	assert.Len(t, keys, 1)
+}
+
+func TestNewFailoverClient(t *testing.T) {
+	var redisFailoverClient = NewFailoverClient(&redis.FailoverOptions{
+		MasterName:    sentinelMasterName,
+		SentinelAddrs: []string{sentinelAddress},
+	})
+	redisFailoverClient.Ping()
 }

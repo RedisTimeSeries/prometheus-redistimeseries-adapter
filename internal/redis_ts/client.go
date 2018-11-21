@@ -24,6 +24,11 @@ func NewClient(address string, auth string) *Client {
 	return (*Client)(client)
 }
 
+func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
+	client := redis.NewFailoverClient(failoverOpt)
+	return (*Client)(client)
+}
+
 func (c *Client) Add(key string, timestamp int64, value float64) *redis.StatusCmd {
 	cmd := redis.NewStatusCmd("TS.ADD", key, timestamp, value)
 	_ = c.Process(cmd)
