@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-redis/redis"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -18,11 +19,13 @@ import (
 )
 
 type config struct {
-	redisAddress  string
-	redisAuth     string
-	remoteTimeout time.Duration
-	listenAddr    string
-	logLevel      string
+	redisAddress            string
+	redisSentinelAddress    string
+	redisSentinelMasterName string
+	redisAuth               string
+	remoteTimeout           time.Duration
+	listenAddr              string
+	logLevel                string
 }
 
 var cfg = &config{}
@@ -38,6 +41,12 @@ func parseFlags() {
 	flag.StringVar(&cfg.redisAddress, "redis-address", "",
 		"The host:port of the Redis server to send samples to. empty, if empty.",
 	)
+	flag.StringVar(&cfg.redisSentinelAddress, "redis-sentinel-address", "",
+		"The host:port of the Redis Sentinel server to query. empty, if empty.",
+	)
+	flag.StringVar(&cfg.redisSentinelMasterName, "redis-sentinel-master", "",
+		"The name of the master to find in Redis Sentinel. empty, if empty.",
+	)
 	flag.DurationVar(&cfg.remoteTimeout, "send-timeout", 30*time.Second,
 		"The timeout to use when sending samples to the remote storage.",
 	)
@@ -49,6 +58,19 @@ func parseFlags() {
 	)
 
 	flag.Parse()
+	validateConfiguration()
+}
+
+func validateConfiguration() {
+	if cfg.redisAddress != "" && (cfg.redisSentinelAddress != "" || cfg.redisSentinelMasterName != "") {
+		log.Error("Invalid configuration: Cannot have both redis-address and redis-sentinel-address")
+		os.Exit(1)
+	}
+
+	if (cfg.redisSentinelAddress != "") != (cfg.redisSentinelMasterName != "") {
+		log.Error("Invalid configuration: Sentinel configuration requires both sentinel address and master name")
+		os.Exit(1)
+	}
 }
 
 func setupLogger() {
@@ -76,8 +98,16 @@ type reader interface {
 func buildClients(cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
+	if cfg.redisSentinelAddress != "" {
+		log.WithFields(log.Fields{"sentinel_address": cfg.redisSentinelAddress}).Info("Creating redis sentinel client")
+		c := redis_ts.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:    cfg.redisSentinelMasterName,
+			SentinelAddrs: []string{cfg.redisSentinelAddress},
+		})
+		writers = append(writers, c)
+	}
 	if cfg.redisAddress != "" {
-		log.WithFields(log.Fields{"redis_ts_address": cfg.redisAddress}).Info()
+		log.WithFields(log.Fields{"redis_ts_address": cfg.redisAddress}).Info("Creating redis TS client")
 		c := redis_ts.NewClient(
 			cfg.redisAddress,
 			cfg.redisAuth)
