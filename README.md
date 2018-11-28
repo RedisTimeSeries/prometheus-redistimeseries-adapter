@@ -66,11 +66,7 @@ redis-ts-adapter --web.listen-address 127.0.0.1:9201
 ## Releases
 See the [releases on this repository](https://github.com/RedisLabs/redis-ts-adapter/releases).
 
-## Authors
-
-* [RoeyPrat](https://github.com/RoeyPrat)
-* [slavak](https://github.com/slavak)
-
+## Contributors
 See also the list of [contributors](https://github.com/RedisLabs/redis-ts-adapter/contributors) who participated in this project.
 
 ## License
