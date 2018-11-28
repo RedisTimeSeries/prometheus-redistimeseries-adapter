@@ -7,6 +7,8 @@ jobs:
     docker:
     # specify the version
     - image: circleci/golang:1.11
+      environment:
+        - GOPATH: /go
 
     working_directory: /go/src/github.com/RedisLabs/redis-ts-adapter
     steps:
