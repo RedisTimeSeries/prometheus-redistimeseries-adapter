@@ -10,7 +10,7 @@ RUN git clone -b 5.0 --depth 1 https://github.com/antirez/redis.git /redis/redis
     make -j install
 
 # Build and install Redis Timeseries
-RUN git clone https://github.com/RedisLabsModules/redis-timeseries.git /redis/redis-timeseries && \
+RUN git clone -b labels https://github.com/RedisLabsModules/redis-timeseries.git /redis/redis-timeseries && \
     cd /redis/redis-timeseries && \
     git submodule init && \
     git submodule update && \

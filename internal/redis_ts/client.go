@@ -14,6 +14,14 @@ import (
 type Client redis.Client
 type StatusCmd redis.StatusCmd
 
+type Tag struct {
+	label, value string
+}
+
+func (t Tag) String() string {
+	return strings.Join([]string{t.label, t.value}, "=")
+}
+
 // NewClient creates a new Client.
 func NewClient(address string, auth string) *Client {
 	client := redis.NewClient(&redis.Options{
@@ -29,8 +37,14 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func (c *Client) Add(key string, timestamp int64, value float64) *redis.StatusCmd {
-	cmd := redis.NewStatusCmd("TS.ADD", key, timestamp, value)
+func (c *Client) Add(key string, tags []Tag, timestamp int64, value float64) *redis.StatusCmd {
+	args := []interface{}{"TS.ADD", key}
+	for _, tag := range tags {
+		args = append(args, tag.String())
+	}
+	args = append(args, timestamp)
+	args = append(args, value)
+	cmd := redis.NewStatusCmd(args...)
 	_ = c.Process(cmd)
 	return cmd
 }
@@ -48,8 +62,7 @@ func (c *Client) Write(samples model.Samples) error {
 			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
 			continue
 		}
-
-		err := c.Add(metricToKeyName(s.Metric), s.Timestamp.Unix(), v).Err()
+		err := c.Add(metricToKeyName(s.Metric), metricToTags(s.Metric), s.Timestamp.Unix(), v).Err()
 		if err != nil {
 			return err
 		}
@@ -57,7 +70,14 @@ func (c *Client) Write(samples model.Samples) error {
 	return nil
 }
 
-// Until Redis TSDB supports tagging, we handle labels by making them part of the TS key.
+func metricToTags(m model.Metric) (tags []Tag) {
+	for label, value := range m {
+		tags = append(tags, Tag{string(label), string(value)})
+	}
+	return tags
+}
+
+// We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
 func metricToKeyName(m model.Metric) (keyName string) {
 	keyName = string(m[model.MetricNameLabel])

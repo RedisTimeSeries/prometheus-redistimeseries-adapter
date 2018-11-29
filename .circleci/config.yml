@@ -19,7 +19,7 @@ jobs:
     - run: cd redis && sudo make -j install
 
     # install redis-timeseries
-    - run: git clone https://github.com/RedisLabsModules/redis-timeseries.git
+    - run: git clone -b labels https://github.com/RedisLabsModules/redis-timeseries.git
     - run: |
         cd redis-timeseries
         git submodule init
