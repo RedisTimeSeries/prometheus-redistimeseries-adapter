@@ -23,7 +23,7 @@ func cleanup(client redis.Client) {
 	_ = client.FlushAll()
 }
 
-func Test_MetricToKeyName(t *testing.T) {
+func Test_metricToKeyName(t *testing.T) {
 	metric := model.Metric{
 		model.MetricNameLabel:      "the_twist",
 		"Z_should_be_last":         "42",
