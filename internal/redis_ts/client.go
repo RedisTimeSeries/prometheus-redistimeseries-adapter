@@ -14,14 +14,6 @@ import (
 type Client redis.Client
 type StatusCmd redis.StatusCmd
 
-type Tag struct {
-	label, value string
-}
-
-func (t Tag) String() string {
-	return strings.Join([]string{t.label, t.value}, "=")
-}
-
 // NewClient creates a new Client.
 func NewClient(address string, auth string) *Client {
 	client := redis.NewClient(&redis.Options{
@@ -37,11 +29,9 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func (c *Client) Add(key string, tags []Tag, timestamp int64, value float64) *redis.StatusCmd {
+func (c *Client) Add(key string, tagsPairs []interface{}, timestamp int64, value float64) *redis.StatusCmd {
 	args := []interface{}{"TS.ADD", key}
-	for _, tag := range tags {
-		args = append(args, tag.String())
-	}
+	args = append(args, tagsPairs...)
 	args = append(args, timestamp)
 	args = append(args, value)
 	cmd := redis.NewStatusCmd(args...)
@@ -62,7 +52,7 @@ func (c *Client) Write(samples model.Samples) error {
 			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
 			continue
 		}
-		err := c.Add(metricToKeyName(s.Metric), metricToTags(s.Metric), s.Timestamp.Unix(), v).Err()
+		err := c.Add(metricToKeyName(s.Metric), metricToTagPairs(s.Metric), s.Timestamp.Unix(), v).Err()
 		if err != nil {
 			return err
 		}
@@ -70,11 +60,11 @@ func (c *Client) Write(samples model.Samples) error {
 	return nil
 }
 
-func metricToTags(m model.Metric) (tags []Tag) {
+func metricToTagPairs(m model.Metric) (tagsPairs []interface{}) {
 	for label, value := range m {
-		tags = append(tags, Tag{string(label), string(value)})
+		tagsPairs = append(tagsPairs, string(label), string(value))
 	}
-	return tags
+	return tagsPairs
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
