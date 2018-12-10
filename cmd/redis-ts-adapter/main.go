@@ -100,18 +100,20 @@ func buildClients(cfg *config) ([]writer, []reader) {
 	var readers []reader
 	if cfg.redisSentinelAddress != "" {
 		log.WithFields(log.Fields{"sentinel_address": cfg.redisSentinelAddress}).Info("Creating redis sentinel client")
-		c := redis_ts.NewFailoverClient(&redis.FailoverOptions{
+		client := redis_ts.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:    cfg.redisSentinelMasterName,
 			SentinelAddrs: []string{cfg.redisSentinelAddress},
 		})
-		writers = append(writers, c)
+		readers = append(readers, client)
+		writers = append(writers, client)
 	}
 	if cfg.redisAddress != "" {
 		log.WithFields(log.Fields{"redis_ts_address": cfg.redisAddress}).Info("Creating redis TS client")
-		c := redis_ts.NewClient(
+		client := redis_ts.NewClient(
 			cfg.redisAddress,
 			cfg.redisAuth)
-		writers = append(writers, c)
+		readers = append(readers, client)
+		writers = append(writers, client)
 	}
 	// TODO: build redis reader here
 	log.Info("Starting up...")

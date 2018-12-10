@@ -2,13 +2,13 @@ package redis_ts
 
 import (
 	"fmt"
+	"github.com/go-redis/redis"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/prompb"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"sort"
 	"strings"
-
-	"github.com/go-redis/redis"
-	"github.com/prometheus/common/model"
-	log "github.com/sirupsen/logrus"
 )
 
 type Client redis.Client
@@ -62,7 +62,7 @@ func (c *Client) Write(samples model.Samples) error {
 
 func metricToTagPairs(m model.Metric) (tagsPairs []interface{}) {
 	for label, value := range m {
-		tagsPairs = append(tagsPairs, string(label), string(value))
+		tagsPairs = append(tagsPairs, strings.Join([]string{string(label), string(value)}, "="))
 	}
 	return tagsPairs
 }
@@ -81,6 +81,77 @@ func metricToKeyName(m model.Metric) (keyName string) {
 	sort.Strings(labels)
 	keyName += "{" + strings.Join(labels, ",") + "}"
 	return keyName
+}
+
+func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
+	var timeSeries []*prompb.TimeSeries
+	for _, q := range req.Queries {
+		labelPairs, err := buildLabelPairs(q)
+		if err != nil {
+			return nil, err
+		}
+		cmd := c.RangeByLabels(labelPairs, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
+		err = cmd.Err()
+		if err != nil {
+			return nil, err
+		}
+		for _, ts := range cmd.Val() {
+			tsSlice := ts.([]interface{})
+			labels := tsSlice[1].([][]string)
+			var tsLabels []*prompb.Label
+			for _, label := range labels {
+				tsLabels = append(tsLabels, &prompb.Label{Name: label[0], Value: label[1]})
+			}
+
+			samples := tsSlice[2].([][]interface{})
+			var tsSamples []prompb.Sample
+			for _, sample := range samples {
+				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
+			}
+
+			timeSerie := &prompb.TimeSeries{
+				Labels:  tsLabels,
+				Samples: tsSamples,
+			}
+			timeSeries = append(timeSeries, timeSerie)
+		}
+
+	}
+	queryResult := prompb.QueryResult{Timeseries: timeSeries}
+	resp := prompb.ReadResponse{Results: []*prompb.QueryResult{&queryResult}}
+	return &resp, nil
+}
+
+func (c *Client) RangeByLabels(labelPairs []string, start int64, end int64) *redis.SliceCmd {
+	// todo: find a way to check labelPairs is dividable by two, that matches style of go-redis
+	args := []interface{}{"TS.RANGEBYLABELS"}
+	numPairs := len(labelPairs) / 2
+	for i := 0; i < numPairs; i++ {
+		args = append(args, strings.Join([]string{labelPairs[2*i], labelPairs[2*i+1]}, "="))
+	}
+	args = append(args, start)
+	args = append(args, end)
+	cmd := redis.NewSliceCmd(args...)
+	_ = c.Process(cmd)
+	return cmd
+}
+
+func buildLabelPairs(q *prompb.Query) (labelPairs []string, err error) {
+	for _, m := range q.Matchers {
+		switch m.Type {
+		case prompb.LabelMatcher_EQ:
+			labelPairs = append(labelPairs, fmt.Sprintf("%q=%s", m.Name, m.Value))
+		case prompb.LabelMatcher_NEQ:
+			labelPairs = append(labelPairs, fmt.Sprintf("%q!=%s", m.Name, m.Value))
+		case prompb.LabelMatcher_RE:
+			return labelPairs, fmt.Errorf("regex-equal matcher is not supported yet. type: %v", m.Type)
+		case prompb.LabelMatcher_NRE:
+			return labelPairs, fmt.Errorf("regex-non-equal matcher is not supported yet. type: %v", m.Type)
+		default:
+			return labelPairs, fmt.Errorf("unknown match type %v", m.Type)
+		}
+	}
+	return labelPairs, nil
 }
 
 // Name identifies the client as an RedisTS client.
