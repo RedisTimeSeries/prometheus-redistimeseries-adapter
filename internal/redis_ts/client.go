@@ -125,11 +125,11 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	return &resp, nil
 }
 
-func (c *Client) RangeByLabels(labels []interface{}, start int64, end int64) *redis.SliceCmd {
-	// todo: find a way to check labels is dividable by two, that matches style of go-redis
-	args := make([]interface{}, 0, len(labels)+3)
+func (c *Client) RangeByLabels(labelMatchers []interface{}, start int64, end int64) *redis.SliceCmd {
+	// todo: find a way to check labelMatchers is dividable by two, that matches style of go-redis
+	args := make([]interface{}, 0, len(labelMatchers)+3)
 	args = append(args, "TS.RANGEBYLABELS")
-	args = append(args, labels...)
+	args = append(args, labelMatchers...)
 	args = append(args, start)
 	args = append(args, end)
 	cmd := redis.NewSliceCmd(args...)

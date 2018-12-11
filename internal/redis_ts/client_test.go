@@ -54,8 +54,8 @@ func TestWriteSingleSample(t *testing.T) {
 
 	keys := redisClient.Keys("test_series{label_1=\"value_1\",label_2=\"value_2\"}").Val()
 	assert.Len(t, keys, 1)
-	labels := []interface{}{"label_1", "value_1"}
-	ranges, err := redisTsClient.RangeByLabels(labels, 0, now.Unix()+5).Result()
+	labelsMatchers := []interface{}{"label_1=value_1"}
+	ranges, err := redisTsClient.RangeByLabels(labelsMatchers, 0, now.Unix()+5).Result()
 	assert.Nil(t, err, "RangeByLabels failed")
 	assert.Len(t, ranges, 1)
 }
