@@ -87,6 +87,7 @@ func metricToKeyName(m model.Metric) (keyName string) {
 
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	var timeSeries []*prompb.TimeSeries
+	results := make([]*prompb.QueryResult, 0, len(req.Queries))
 	for _, q := range req.Queries {
 		labelMatchers, err := labelMatchers(q)
 		if err != nil {
@@ -117,10 +118,10 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 			}
 			timeSeries = append(timeSeries, thisSeries)
 		}
-
+		results = append(results, &prompb.QueryResult{Timeseries: timeSeries})
 	}
-	queryResult := prompb.QueryResult{Timeseries: timeSeries}
-	resp := prompb.ReadResponse{Results: []*prompb.QueryResult{&queryResult}}
+
+	resp := prompb.ReadResponse{Results: results}
 	return &resp, nil
 }
 
