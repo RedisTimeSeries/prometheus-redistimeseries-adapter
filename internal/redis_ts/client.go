@@ -141,9 +141,9 @@ func labelMatchers(q *prompb.Query) (labels []interface{}, err error) {
 	for _, m := range q.Matchers {
 		switch m.Type {
 		case prompb.LabelMatcher_EQ:
-			labels = append(labels, fmt.Sprintf("%q=%s", m.Name, m.Value))
+			labels = append(labels, fmt.Sprintf("%s=%s", m.Name, m.Value))
 		case prompb.LabelMatcher_NEQ:
-			labels = append(labels, fmt.Sprintf("%q!=%s", m.Name, m.Value))
+			labels = append(labels, fmt.Sprintf("%s!=%s", m.Name, m.Value))
 		case prompb.LabelMatcher_RE:
 			return labels, fmt.Errorf("regex-equal matcher is not supported yet. type: %v", m.Type)
 		case prompb.LabelMatcher_NRE:
