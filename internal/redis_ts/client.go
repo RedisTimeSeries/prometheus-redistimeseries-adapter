@@ -127,7 +127,8 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 
 func (c *Client) RangeByLabels(labels []interface{}, start int64, end int64) *redis.SliceCmd {
 	// todo: find a way to check labels is dividable by two, that matches style of go-redis
-	args := []interface{}{"TS.RANGEBYLABELS"}
+	args := make([]interface{}, 0, len(labels)+3)
+	args = append(args, "TS.RANGEBYLABELS")
 	args = append(args, labels...)
 	args = append(args, start)
 	args = append(args, end)
@@ -137,6 +138,7 @@ func (c *Client) RangeByLabels(labels []interface{}, start int64, end int64) *re
 }
 
 func labelMatchers(q *prompb.Query) (labels []interface{}, err error) {
+	labels = make([]interface{}, 0, len(q.Matchers))
 	for _, m := range q.Matchers {
 		switch m.Type {
 		case prompb.LabelMatcher_EQ:
