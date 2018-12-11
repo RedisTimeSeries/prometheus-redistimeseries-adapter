@@ -111,11 +111,11 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
 			}
 
-			timeSerie := &prompb.TimeSeries{
+			thisSeries := &prompb.TimeSeries{
 				Labels:  tsLabels,
 				Samples: tsSamples,
 			}
-			timeSeries = append(timeSeries, timeSerie)
+			timeSeries = append(timeSeries, thisSeries)
 		}
 
 	}
