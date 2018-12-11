@@ -64,7 +64,7 @@ func (c *Client) Write(samples model.Samples) error {
 func metricToLabels(m model.Metric) (labels []interface{}) {
 	labels = make([]interface{}, 0, len(m))
 	for label, value := range m {
-		labels = append(labels, strings.Join([]string{string(label), string(value)}, "="))
+		labels = append(labels, fmt.Sprintf("%s=%s", label, value))
 	}
 	return labels
 }

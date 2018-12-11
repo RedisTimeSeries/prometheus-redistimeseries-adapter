@@ -67,3 +67,18 @@ func TestNewFailoverClient(t *testing.T) {
 	})
 	redisFailoverClient.Ping()
 }
+
+func Test_metricToLabels(t *testing.T) {
+	m := model.Metric{
+		"leaving": "jet_plane",
+		"don't":   "know_when",
+		"i'll":    "be_back_again",
+	}
+	interfaceSlice := metricToLabels(m)
+	expected := []interface{}{
+		"leaving=jet_plane",
+		"don't=know_when",
+		"i'll=be_back_again",
+	}
+	assert.Equal(t,expected,interfaceSlice)
+}
