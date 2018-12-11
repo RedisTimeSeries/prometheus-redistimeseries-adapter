@@ -88,11 +88,11 @@ func metricToKeyName(m model.Metric) (keyName string) {
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	var timeSeries []*prompb.TimeSeries
 	for _, q := range req.Queries {
-		labelPairs, err := buildLabelPairs(q)
+		labelMatchers, err := labelMatchers(q)
 		if err != nil {
 			return nil, err
 		}
-		cmd := c.RangeByLabels(labelPairs, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
+		cmd := c.RangeByLabels(labelMatchers, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
 		err = cmd.Err()
 		if err != nil {
 			return nil, err
@@ -124,12 +124,12 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	return &resp, nil
 }
 
-func (c *Client) RangeByLabels(labelPairs []string, start int64, end int64) *redis.SliceCmd {
-	// todo: find a way to check labelPairs is dividable by two, that matches style of go-redis
+func (c *Client) RangeByLabels(labels []string, start int64, end int64) *redis.SliceCmd {
+	// todo: find a way to check labels is dividable by two, that matches style of go-redis
 	args := []interface{}{"TS.RANGEBYLABELS"}
-	numPairs := len(labelPairs) / 2
+	numPairs := len(labels) / 2
 	for i := 0; i < numPairs; i++ {
-		args = append(args, strings.Join([]string{labelPairs[2*i], labelPairs[2*i+1]}, "="))
+		args = append(args, strings.Join([]string{labels[2*i], labels[2*i+1]}, "="))
 	}
 	args = append(args, start)
 	args = append(args, end)
@@ -138,22 +138,22 @@ func (c *Client) RangeByLabels(labelPairs []string, start int64, end int64) *red
 	return cmd
 }
 
-func buildLabelPairs(q *prompb.Query) (labelPairs []string, err error) {
+func labelMatchers(q *prompb.Query) (labels []string, err error) {
 	for _, m := range q.Matchers {
 		switch m.Type {
 		case prompb.LabelMatcher_EQ:
-			labelPairs = append(labelPairs, fmt.Sprintf("%q=%s", m.Name, m.Value))
+			labels = append(labels, fmt.Sprintf("%q=%s", m.Name, m.Value))
 		case prompb.LabelMatcher_NEQ:
-			labelPairs = append(labelPairs, fmt.Sprintf("%q!=%s", m.Name, m.Value))
+			labels = append(labels, fmt.Sprintf("%q!=%s", m.Name, m.Value))
 		case prompb.LabelMatcher_RE:
-			return labelPairs, fmt.Errorf("regex-equal matcher is not supported yet. type: %v", m.Type)
+			return labels, fmt.Errorf("regex-equal matcher is not supported yet. type: %v", m.Type)
 		case prompb.LabelMatcher_NRE:
-			return labelPairs, fmt.Errorf("regex-non-equal matcher is not supported yet. type: %v", m.Type)
+			return labels, fmt.Errorf("regex-non-equal matcher is not supported yet. type: %v", m.Type)
 		default:
-			return labelPairs, fmt.Errorf("unknown match type %v", m.Type)
+			return labels, fmt.Errorf("unknown match type %v", m.Type)
 		}
 	}
-	return labelPairs, nil
+	return labels, nil
 }
 
 // Name identifies the client as an RedisTS client.
