@@ -101,13 +101,13 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 		for _, ts := range cmd.Val() {
 			tsSlice := ts.([]interface{})
 			labels := tsSlice[1].([][]string)
-			tsLabels := make([]*prompb.Label, 0, len(labels)/2)
+			tsLabels := make([]*prompb.Label, 0, len(labels))
 			for _, label := range labels {
 				tsLabels = append(tsLabels, &prompb.Label{Name: label[0], Value: label[1]})
 			}
 
 			samples := tsSlice[2].([][]interface{})
-			tsSamples := make([]prompb.Sample, 0, len(samples)/2)
+			tsSamples := make([]prompb.Sample, 0, len(samples))
 			for _, sample := range samples {
 				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
 			}
@@ -126,7 +126,6 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 }
 
 func (c *Client) RangeByLabels(labelMatchers []interface{}, start int64, end int64) *redis.SliceCmd {
-	// todo: find a way to check labelMatchers is dividable by two, that matches style of go-redis
 	args := make([]interface{}, 0, len(labelMatchers)+3)
 	args = append(args, "TS.RANGEBYLABELS")
 	args = append(args, labelMatchers...)
