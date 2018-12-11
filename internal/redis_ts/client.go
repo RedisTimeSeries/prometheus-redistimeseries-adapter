@@ -100,13 +100,13 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 		for _, ts := range cmd.Val() {
 			tsSlice := ts.([]interface{})
 			labels := tsSlice[1].([][]string)
-			var tsLabels []*prompb.Label
+			tsLabels := make([]*prompb.Label, 0, len(labels)/2)
 			for _, label := range labels {
 				tsLabels = append(tsLabels, &prompb.Label{Name: label[0], Value: label[1]})
 			}
 
 			samples := tsSlice[2].([][]interface{})
-			var tsSamples []prompb.Sample
+			tsSamples := make([]prompb.Sample, 0, len(samples)/2)
 			for _, sample := range samples {
 				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
 			}
