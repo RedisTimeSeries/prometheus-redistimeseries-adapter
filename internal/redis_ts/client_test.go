@@ -80,5 +80,5 @@ func Test_metricToLabels(t *testing.T) {
 		"don't=know_when",
 		"i'll=be_back_again",
 	}
-	assert.Equal(t, expected, interfaceSlice)
+	assert.ElementsMatch(t, expected, interfaceSlice)
 }
