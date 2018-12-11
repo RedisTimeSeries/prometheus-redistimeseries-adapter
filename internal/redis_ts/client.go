@@ -29,9 +29,9 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func (c *Client) Add(key string, tagsPairs []interface{}, timestamp int64, value float64) *redis.StatusCmd {
+func (c *Client) Add(key string, labels []interface{}, timestamp int64, value float64) *redis.StatusCmd {
 	args := []interface{}{"TS.ADD", key}
-	args = append(args, tagsPairs...)
+	args = append(args, labels...)
 	args = append(args, timestamp)
 	args = append(args, value)
 	cmd := redis.NewStatusCmd(args...)
@@ -52,7 +52,7 @@ func (c *Client) Write(samples model.Samples) error {
 			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
 			continue
 		}
-		err := c.Add(metricToKeyName(s.Metric), metricToTagPairs(s.Metric), s.Timestamp.Unix(), v).Err()
+		err := c.Add(metricToKeyName(s.Metric), metricToLabels(s.Metric), s.Timestamp.Unix(), v).Err()
 		if err != nil {
 			return err
 		}
@@ -60,11 +60,13 @@ func (c *Client) Write(samples model.Samples) error {
 	return nil
 }
 
-func metricToTagPairs(m model.Metric) (tagsPairs []interface{}) {
+// Returns labels in string format (key=value), but as slice of interfaces.
+func metricToLabels(m model.Metric) (labels []interface{}) {
+	labels = make([]interface{}, 0, len(m))
 	for label, value := range m {
-		tagsPairs = append(tagsPairs, strings.Join([]string{string(label), string(value)}, "="))
+		labels = append(labels, strings.Join([]string{string(label), string(value)}, "="))
 	}
-	return tagsPairs
+	return labels
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
