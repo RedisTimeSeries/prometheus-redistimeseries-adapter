@@ -29,22 +29,24 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func (c *Client) Add(key string, labels []interface{}, timestamp int64, value float64) *redis.StatusCmd {
+func add(key string, labels []interface{}, timestamp int64, value float64) redis.Cmder {
 	args := []interface{}{"TS.ADD", key}
 	args = append(args, labels...)
 	args = append(args, timestamp)
 	args = append(args, value)
 	cmd := redis.NewStatusCmd(args...)
-	_ = c.Process(cmd)
 	return cmd
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(samples model.Samples) error {
+	pipe := (*redis.Client)(c).Pipeline()
+
 	for _, s := range samples {
 		_, exists := s.Metric[model.MetricNameLabel]
 		if !exists {
 			log.WithFields(log.Fields{"sample": s}).Info("Cannot send unnamed sample to RedisTS, skipping")
+			continue
 		}
 
 		v := float64(s.Value)
@@ -52,12 +54,15 @@ func (c *Client) Write(samples model.Samples) error {
 			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
 			continue
 		}
-		err := c.Add(metricToKeyName(s.Metric), metricToLabels(s.Metric), s.Timestamp.Unix(), v).Err()
+		cmd := add(metricToKeyName(s.Metric), metricToLabels(s.Metric), s.Timestamp.Unix(), v)
+		err := pipe.Process(cmd)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+
+	_, err := pipe.Exec()
+	return err
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
@@ -88,16 +93,30 @@ func metricToKeyName(m model.Metric) (keyName string) {
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	var timeSeries []*prompb.TimeSeries
 	results := make([]*prompb.QueryResult, 0, len(req.Queries))
+	pipe := (*redis.Client)(c).Pipeline()
+
+	commands := make([]*redis.SliceCmd, 0, len(req.Queries))
 	for _, q := range req.Queries {
 		labelMatchers, err := labelMatchers(q)
 		if err != nil {
 			return nil, err
 		}
-		cmd := c.RangeByLabels(labelMatchers, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
-		err = cmd.Err()
+		cmd := c.rangeByLabels(labelMatchers, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
+		err = pipe.Process(cmd)
 		if err != nil {
 			return nil, err
 		}
+		commands = append(commands, cmd)
+	}
+
+	pipe.Exec()
+
+	for _, cmd := range commands {
+		err := cmd.Err()
+		if err != nil {
+			return nil, err
+		}
+
 		for _, ts := range cmd.Val() {
 			tsSlice := ts.([]interface{})
 			labels := tsSlice[1].([][]string)
@@ -125,14 +144,13 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	return &resp, nil
 }
 
-func (c *Client) RangeByLabels(labelMatchers []interface{}, start int64, end int64) *redis.SliceCmd {
+func (c *Client) rangeByLabels(labelMatchers []interface{}, start int64, end int64) *redis.SliceCmd {
 	args := make([]interface{}, 0, len(labelMatchers)+3)
 	args = append(args, "TS.RANGEBYLABELS")
 	args = append(args, labelMatchers...)
 	args = append(args, start)
 	args = append(args, end)
 	cmd := redis.NewSliceCmd(args...)
-	_ = c.Process(cmd)
 	return cmd
 }
 
