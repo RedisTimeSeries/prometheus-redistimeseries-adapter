@@ -109,7 +109,10 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 		commands = append(commands, cmd)
 	}
 
-	pipe.Exec()
+	_, err := pipe.Exec()
+	if err != nil {
+		return nil, err
+	}
 
 	for _, cmd := range commands {
 		err := cmd.Err()

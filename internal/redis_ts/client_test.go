@@ -56,7 +56,8 @@ func TestWriteSingleSample(t *testing.T) {
 	assert.Len(t, keys, 1)
 	labelsMatchers := []interface{}{"label_1=value_1"}
 	cmd := redisTsClient.rangeByLabels(labelsMatchers, 0, now.Unix()+5)
-	redisTsClient.Process(cmd)
+	err = redisTsClient.Process(cmd)
+	assert.Nil(t, err, "rangeByLabels failed to process")
 	ranges, err := cmd.Result()
 	assert.Nil(t, err, "rangeByLabels failed")
 	assert.Len(t, ranges, 1)
