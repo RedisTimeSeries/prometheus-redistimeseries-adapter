@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -122,18 +123,23 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 
 		for _, ts := range cmd.Val() {
 			tsSlice := ts.([]interface{})
-			labels := tsSlice[1].([][]string)
+			labels := tsSlice[1].([]interface{})
 			tsLabels := make([]*prompb.Label, 0, len(labels))
 			for _, label := range labels {
-				tsLabels = append(tsLabels, &prompb.Label{Name: label[0], Value: label[1]})
+				parsedLabel := label.([]interface{})
+				tsLabels = append(tsLabels, &prompb.Label{Name: parsedLabel[0].(string), Value: parsedLabel[1].(string)})
 			}
 
-			samples := tsSlice[2].([][]interface{})
+			samples := tsSlice[2].([]interface{})
 			tsSamples := make([]prompb.Sample, 0, len(samples))
 			for _, sample := range samples {
-				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
+				parsedSample := sample.([]interface{})
+				value, err := strconv.ParseFloat(parsedSample[1].(string), 64)
+				if err != nil {
+					return nil, err
+				}
+				tsSamples = append(tsSamples, prompb.Sample{Timestamp: parsedSample[0].(int64) * 1000, Value: value})
 			}
-
 			thisSeries := &prompb.TimeSeries{
 				Labels:  tsLabels,
 				Samples: tsSamples,
