@@ -30,11 +30,13 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func add(key string, labels []interface{}, timestamp int64, value float64) redis.Cmder {
-	args := []interface{}{"TS.ADD", key}
-	args = append(args, labels...)
-	args = append(args, timestamp)
-	args = append(args, value)
+func add(key string, labels []string, timestamp int64, value float64) redis.Cmder {
+	args := make([]interface{}, 0, len(labels)+3)
+	args = append(args, "TS.ADD", key)
+	for _, label := range labels {
+		args = append(args, label)
+	}
+	args = append(args, timestamp, value)
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
 }
@@ -46,16 +48,17 @@ func (c *Client) Write(samples model.Samples) error {
 	for _, s := range samples {
 		_, exists := s.Metric[model.MetricNameLabel]
 		if !exists {
-			log.WithFields(log.Fields{"sample": s}).Info("Cannot send unnamed sample to RedisTS, skipping")
+			log.WithFields(log.Fields{"sample": s}).Debug("Cannot send unnamed sample to RedisTS, skipping")
 			continue
 		}
 
 		v := float64(s.Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
+			log.WithFields(log.Fields{"sample": s, "value": v}).Debug("Cannot send to RedisTS, skipping")
 			continue
 		}
-		cmd := add(metricToKeyName(s.Metric), metricToLabels(s.Metric), s.Timestamp.Unix(), v)
+		labels, keyName := metricToLabels(s.Metric)
+		cmd := add(keyName, labels, s.Timestamp.Unix(), v)
 		err := pipe.Process(cmd)
 		if err != nil {
 			return err
@@ -67,28 +70,15 @@ func (c *Client) Write(samples model.Samples) error {
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(m model.Metric) (labels []interface{}) {
-	labels = make([]interface{}, 0, len(m))
+//  also returns key name in form metric_name
+func metricToLabels(m model.Metric) (labels []string, keyName string) {
+	labels = make([]string, 0, len(m))
 	for label, value := range m {
 		labels = append(labels, fmt.Sprintf("%s=%s", label, value))
 	}
-	return labels
-}
-
-// We add labels to TS key, to keep key unique per labelSet.
-// The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
-func metricToKeyName(m model.Metric) (keyName string) {
-	keyName = string(m[model.MetricNameLabel])
-	labels := make([]string, 0, len(m))
-
-	for label, value := range m {
-		if label != model.MetricNameLabel {
-			labels = append(labels, fmt.Sprintf("%s=\"%s\"", label, value))
-		}
-	}
 	sort.Strings(labels)
-	keyName += "{" + strings.Join(labels, ",") + "}"
-	return keyName
+	keyName = string(m[model.MetricNameLabel])
+	return labels, fmt.Sprintf("%s;%s", keyName, strings.Join(labels, ","))
 }
 
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
