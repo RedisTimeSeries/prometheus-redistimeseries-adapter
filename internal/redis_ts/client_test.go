@@ -19,18 +19,6 @@ var redisClient = redis.NewClient(&redis.Options{
 	DB:       0,         // use default DB
 })
 
-func Test_metricToKeyName(t *testing.T) {
-	metric := model.Metric{
-		model.MetricNameLabel:      "the_twist",
-		"Z_should_be_last":         "42",
-		"A_should_be_first":        "falafel",
-		"U_are_so_beautiful_to_me": "sugar",
-	}
-	keyName := metricToKeyName(metric)
-	expected := "the_twist{A_should_be_first=\"falafel\",U_are_so_beautiful_to_me=\"sugar\",Z_should_be_last=\"42\"}"
-	assert.Equal(t, expected, keyName)
-}
-
 func TestWriteSingleSample(t *testing.T) {
 	now := model.Now()
 	answerToLifeTheUniverse := 42.1
@@ -73,15 +61,19 @@ func TestNewFailoverClient(t *testing.T) {
 
 func Test_metricToLabels(t *testing.T) {
 	m := model.Metric{
+		"__name__": "wow",
 		"leaving": "jet_plane",
 		"don't":   "know_when",
 		"i'll":    "be_back_again",
 	}
-	interfaceSlice := metricToLabels(m)
-	expected := []interface{}{
+	labels, keyName := metricToLabels(m)
+	expectedLabels := []string{
 		"leaving=jet_plane",
 		"don't=know_when",
 		"i'll=be_back_again",
 	}
-	assert.ElementsMatch(t, expected, interfaceSlice)
+	assert.ElementsMatch(t, expectedLabels, labels)
+	expectedName := "__name__;don't=know_when,i'll=be_back_again,leaving=jet_plane"
+	assert.ElementsMatch(t, expectedName, keyName)
+
 }
