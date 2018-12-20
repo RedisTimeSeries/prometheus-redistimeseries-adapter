@@ -40,7 +40,7 @@ func TestWriteSingleSample(t *testing.T) {
 	err := redisTsClient.Write(samples)
 	assert.Nil(t, err, "Write of samples failed")
 
-	keys := redisClient.Keys("test_series{label_1=\"value_1\",label_2=\"value_2\"}").Val()
+	keys := redisClient.Keys("__name__=test_series,label_1=value_1,label_2=value_2").Val()
 	assert.Len(t, keys, 1)
 	labelsMatchers := []interface{}{"label_1=value_1"}
 	cmd := redisTsClient.rangeByLabels(labelsMatchers, 0, now.Unix()+5)
@@ -62,18 +62,19 @@ func TestNewFailoverClient(t *testing.T) {
 func Test_metricToLabels(t *testing.T) {
 	m := model.Metric{
 		"__name__": "wow",
-		"leaving": "jet_plane",
-		"don't":   "know_when",
-		"i'll":    "be_back_again",
+		"leaving":  "jet_plane",
+		"don't":    "know_when",
+		"i'll":     "be_back_again",
 	}
 	labels, keyName := metricToLabels(m)
 	expectedLabels := []string{
+		"__name__=wow",
 		"leaving=jet_plane",
 		"don't=know_when",
 		"i'll=be_back_again",
 	}
 	assert.ElementsMatch(t, expectedLabels, labels)
-	expectedName := "__name__;don't=know_when,i'll=be_back_again,leaving=jet_plane"
-	assert.ElementsMatch(t, expectedName, keyName)
+	expectedName := "__name__=wow,don't=know_when,i'll=be_back_again,leaving=jet_plane"
+	assert.Equal(t, expectedName, keyName)
 
 }

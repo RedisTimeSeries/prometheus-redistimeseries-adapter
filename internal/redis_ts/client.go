@@ -77,8 +77,7 @@ func metricToLabels(m model.Metric) (labels []string, keyName string) {
 		labels = append(labels, fmt.Sprintf("%s=%s", label, value))
 	}
 	sort.Strings(labels)
-	keyName = string(m[model.MetricNameLabel])
-	return labels, fmt.Sprintf("%s;%s", keyName, strings.Join(labels, ","))
+	return labels, strings.Join(labels, ",")
 }
 
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
