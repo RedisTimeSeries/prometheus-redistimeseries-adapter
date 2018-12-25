@@ -42,9 +42,14 @@ func add(key string, labels []string, timestamp int64, value float64) redis.Cmde
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
-func (c *Client) Write(samples model.Samples) error {
+func (c *Client) Write(samples model.Samples) (returnErr error) {
 	pipe := (*redis.Client)(c).Pipeline()
-
+	defer func() {
+		err := pipe.Close()
+		if err != nil {
+			returnErr = err
+		}
+	}()
 	for _, s := range samples {
 		_, exists := s.Metric[model.MetricNameLabel]
 		if !exists {
@@ -80,10 +85,16 @@ func metricToLabels(m model.Metric) (labels []string, keyName string) {
 	return labels, strings.Join(labels, ",")
 }
 
-func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
+func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, returnErr error) {
 	var timeSeries []*prompb.TimeSeries
 	results := make([]*prompb.QueryResult, 0, len(req.Queries))
 	pipe := (*redis.Client)(c).Pipeline()
+	defer func() {
+		err := pipe.Close()
+		if err != nil {
+			returnErr = err
+		}
+	}()
 
 	commands := make([]*redis.SliceCmd, 0, len(req.Queries))
 	for _, q := range req.Queries {
