@@ -1,6 +1,7 @@
 package redis_ts
 
 import (
+	"github.com/prometheus/prometheus/prompb"
 	"testing"
 
 	"github.com/go-redis/redis"
@@ -19,40 +20,52 @@ var redisClient = redis.NewClient(&redis.Options{
 	DB:       0,         // use default DB
 })
 
-func Test_metricToKeyName(t *testing.T) {
-	metric := model.Metric{
-		model.MetricNameLabel:      "the_twist",
-		"Z_should_be_last":         "42",
-		"A_should_be_first":        "falafel",
-		"U_are_so_beautiful_to_me": "sugar",
-	}
-	keyName := metricToKeyName(metric)
-	expected := "the_twist{A_should_be_first=\"falafel\",U_are_so_beautiful_to_me=\"sugar\",Z_should_be_last=\"42\"}"
-	assert.Equal(t, expected, keyName)
-}
-
 func TestWriteSingleSample(t *testing.T) {
 	now := model.Now()
 	answerToLifeTheUniverse := 42.1
 
-	samples := model.Samples{
-		&model.Sample{
-			Metric: model.Metric{
-				model.MetricNameLabel: "test_series",
-				"label_1":             "value_1",
-				"label_2":             "value_2",
+	samples := []*prompb.TimeSeries{
+		{
+			Labels: []*prompb.Label{
+				{
+					Name:  "label_1",
+					Value: "value_1",
+				},
+				{
+					Name:  "label_2",
+					Value: "value_2",
+				},
+				{
+					Name:  "__name__",
+					Value: "test_series",
+				},
 			},
-			Value:     model.SampleValue(answerToLifeTheUniverse),
-			Timestamp: now,
+			Samples: []prompb.Sample{
+				{
+					Timestamp: now.Unix(),
+					Value: answerToLifeTheUniverse,
+				},
+			},
 		},
 	}
+	//	model.Samples{
+	//	&model.Sample{
+	//		Metric: model.Metric{
+	//			model.MetricNameLabel: "test_series",
+	//			"label_1":             "value_1",
+	//			"label_2":             "value_2",
+	//		},
+	//		Value:     model.SampleValue(answerToLifeTheUniverse),
+	//		Timestamp: now,
+	//	},
+	//}
 
 	var redisTsClient = NewClient(redisAddress, redisAuth)
 
 	err := redisTsClient.Write(samples)
 	assert.Nil(t, err, "Write of samples failed")
 
-	keys := redisClient.Keys("test_series{label_1=\"value_1\",label_2=\"value_2\"}").Val()
+	keys := redisClient.Keys("test_series{label_1=value_1,label_2=value_2}").Val()
 	assert.Len(t, keys, 1)
 	labelsMatchers := []interface{}{"label_1=value_1"}
 	cmd := redisTsClient.rangeByLabels(labelsMatchers, 0, now.Unix()+5)
@@ -72,16 +85,78 @@ func TestNewFailoverClient(t *testing.T) {
 }
 
 func Test_metricToLabels(t *testing.T) {
-	m := model.Metric{
-		"leaving": "jet_plane",
-		"don't":   "know_when",
-		"i'll":    "be_back_again",
+	m1 := []*prompb.Label{
+		{
+			Name:  "leaving",
+			Value: "jet_plane",
+		},
+		{
+			Name:  "don't",
+			Value: "know_when",
+		},
+		{
+			Name:  "i'll",
+			Value: "be_back_again",
+		},
+		{
+			Name:  "__name__",
+			Value: "song",
+		},
 	}
-	interfaceSlice := metricToLabels(m)
+	m2 := []*prompb.Label{
+		{
+			Name:  "leaving",
+			Value: "jet_plane",
+		},
+		{
+			Name:  "i'll",
+			Value: "be_back_again",
+		},
+		{
+			Name:  "don't",
+			Value: "know_when",
+		},
+		{
+			Name:  "__name__",
+			Value: "song",
+		},
+	}
+	m3 := []*prompb.Label{
+
+		{
+			Name:  "i'll",
+			Value: "be_back_again",
+		},
+		{
+			Name:  "__name__",
+			Value: "song",
+		},
+		{
+			Name:  "don't",
+			Value: "know_when",
+		},
+		{
+			Name:  "leaving",
+			Value: "jet_plane",
+		},
+	}
+
+	testMetricToLabels(t, m1)
+	testMetricToLabels(t, m2)
+	testMetricToLabels(t, m3)
+}
+
+func testMetricToLabels(t *testing.T, l []*prompb.Label) {
+	labels, metricName := metricToLabels(l)
 	expected := []interface{}{
 		"leaving=jet_plane",
-		"don't=know_when",
 		"i'll=be_back_again",
+		"don't=know_when",
 	}
-	assert.ElementsMatch(t, expected, interfaceSlice)
+	assert.ElementsMatch(t, expected, *labels)
+	assert.Equal(t, "song", *metricName)
+
+	keyName := metricToKeyName(metricName, labels)
+	expected_key := "song{don't=know_when,i'll=be_back_again,leaving=jet_plane}"
+	assert.Equal(t, expected_key, keyName)
 }

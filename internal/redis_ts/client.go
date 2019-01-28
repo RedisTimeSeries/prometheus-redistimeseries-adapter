@@ -3,7 +3,6 @@ package redis_ts
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 	log "github.com/sirupsen/logrus"
 	"math"
@@ -30,38 +29,42 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func add(key string, labels *[]string, timestamp int64, value float64) redis.Cmder {
-	args := []interface{}{"TS.ADD", key}
+func add(key *string, labels *[]string, metric *string, timestamp *int64, value *float64) redis.Cmder {
+	args := []interface{}{"TS.ADD", *key}
 	for i := range *labels {
 		args = append(args, (*labels)[i])
 	}
-	args = append(args, strconv.FormatInt(timestamp, 10))
-	args = append(args, strconv.FormatFloat(value, 'E', -1, 64))
+	args = append(args, "__name__=" + *metric)
+	args = append(args, strconv.FormatInt(*timestamp, 10))
+	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
-func (c *Client) Write(samples model.Samples) error {
+func (c *Client) Write(timeseries []*prompb.TimeSeries) error {
 	pipe := (*redis.Client)(c).Pipeline()
 
-	for i := range samples {
-		_, exists := samples[i].Metric[model.MetricNameLabel]
-		if !exists {
-			log.WithFields(log.Fields{"sample": samples[i]}).Info("Cannot send unnamed sample to RedisTS, skipping")
+	for i := range timeseries{
+		samples := timeseries[i].Samples
+		labels, metric := metricToLabels(timeseries[i].Labels)
+		key := metricToKeyName(metric, labels)
+		if *metric == "" {
+			log.WithFields(log.Fields{"Metric": timeseries[i].Labels}).Info("Cannot send unnamed sample to RedisTS, skipping")
 			continue
 		}
+		for j := range samples {
+			sample := &samples[j]
+			if math.IsNaN(sample.Value) || math.IsInf(sample.Value, 0) {
+				log.WithFields(log.Fields{"sample": sample, "value": sample.Value}).Debug("Cannot send to RedisTS, skipping")
+				continue
+			}
 
-		v := float64(samples[i].Value)
-		if math.IsNaN(v) || math.IsInf(v, 0) {
-			log.WithFields(log.Fields{"sample": samples[i], "value": v}).Debug("Cannot send to RedisTS, skipping")
-			continue
-		}
-		labels := metricToLabels(samples[i].Metric)
-		cmd := add(metricToKeyName(samples[i].Metric, labels), labels, samples[i].Timestamp.Unix(), v)
-		err := pipe.Process(cmd)
-		if err != nil {
-			return err
+			cmd := add(&key, labels, metric, &sample.Timestamp, &sample.Value)
+			err := pipe.Process(cmd)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -70,21 +73,26 @@ func (c *Client) Write(samples model.Samples) error {
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(m model.Metric) *[]string {
-	var labels = make([]string, 0, len(m))
-	for label, value := range m {
-		labels = append(labels, fmt.Sprintf("%s=%s", label, value))
+func metricToLabels(l []*prompb.Label) (*[]string, *string) {
+	var labels = make([]string, 0, len(l) - 1)
+	var metric = ""
+	for i := range l {
+		if l[i].Name == "__name__" {
+			metric = l[i].Value
+		} else {
+			labels = append(labels, fmt.Sprintf("%s=%s", l[i].Name, l[i].Value))
+		}
 	}
 	sort.Strings(labels)
-	return &labels
+	return &labels, &metric
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
-func metricToKeyName(m model.Metric, labels *[]string) (keyName string) {
-	keyName = string(m[model.MetricNameLabel])
-	keyName += "{" + strings.Join(*labels, ",") + "}"
-	return keyName
+func metricToKeyName(metric *string, labels *[]string) (keyName string) {
+	//keyName = string(m[model.MetricNameLabel])
+	labelStr := "{" + strings.Join(*labels, ",") + "}"
+	return *metric + labelStr
 }
 
 func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {

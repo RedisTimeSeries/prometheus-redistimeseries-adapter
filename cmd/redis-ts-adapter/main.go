@@ -86,7 +86,7 @@ func setupLogger() {
 }
 
 type writer interface {
-	Write(samples model.Samples) error
+	Write(samples []*prompb.TimeSeries) error
 	Name() string
 }
 
@@ -164,13 +164,13 @@ func serve(addr string, writers []writer, readers []reader) error {
 			return
 		}
 
-		samples := protoToSamples(&req)
+		//samples := protoToSamples(&req)
 
 		var wg sync.WaitGroup
 		//for _, w := range writers {
 			wg.Add(1)
 			go func(rw writer) {
-				sendSamples(rw, samples)
+				sendSamples(rw, req.Timeseries)
 				wg.Done()
 			}(writers[0])
 		//}
@@ -242,7 +242,7 @@ func main() {
 	}
 }
 
-func sendSamples(w writer, samples model.Samples) {
+func sendSamples(w writer, samples []*prompb.TimeSeries) {
 	err := w.Write(samples)
 	if err != nil {
 		log.WithFields(log.Fields{"storage": w.Name(), "err": err, "num_samples": len(samples)}).Warn("Could not send samples to remote storage")
