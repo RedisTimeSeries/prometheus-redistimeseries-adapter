@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -29,11 +30,13 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func add(key string, labels []interface{}, timestamp int64, value float64) redis.Cmder {
+func add(key string, labels *[]string, timestamp int64, value float64) redis.Cmder {
 	args := []interface{}{"TS.ADD", key}
-	args = append(args, labels...)
-	args = append(args, timestamp)
-	args = append(args, value)
+	for i := range *labels {
+		args = append(args, (*labels)[i])
+	}
+	args = append(args, strconv.FormatInt(timestamp, 10))
+	args = append(args, strconv.FormatFloat(value, 'E', -1, 64))
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
 }
@@ -42,19 +45,20 @@ func add(key string, labels []interface{}, timestamp int64, value float64) redis
 func (c *Client) Write(samples model.Samples) error {
 	pipe := (*redis.Client)(c).Pipeline()
 
-	for _, s := range samples {
-		_, exists := s.Metric[model.MetricNameLabel]
+	for i := range samples {
+		_, exists := samples[i].Metric[model.MetricNameLabel]
 		if !exists {
-			log.WithFields(log.Fields{"sample": s}).Info("Cannot send unnamed sample to RedisTS, skipping")
+			log.WithFields(log.Fields{"sample": samples[i]}).Info("Cannot send unnamed sample to RedisTS, skipping")
 			continue
 		}
 
-		v := float64(s.Value)
+		v := float64(samples[i].Value)
 		if math.IsNaN(v) || math.IsInf(v, 0) {
-			log.WithFields(log.Fields{"sample": s, "value": v}).Info("Cannot send to RedisTS, skipping")
+			log.WithFields(log.Fields{"sample": samples[i], "value": v}).Debug("Cannot send to RedisTS, skipping")
 			continue
 		}
-		cmd := add(metricToKeyName(s.Metric), metricToLabels(s.Metric), s.Timestamp.Unix(), v)
+		labels := metricToLabels(samples[i].Metric)
+		cmd := add(metricToKeyName(samples[i].Metric, labels), labels, samples[i].Timestamp.Unix(), v)
 		err := pipe.Process(cmd)
 		if err != nil {
 			return err
@@ -66,27 +70,20 @@ func (c *Client) Write(samples model.Samples) error {
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(m model.Metric) (labels []interface{}) {
-	labels = make([]interface{}, 0, len(m))
+func metricToLabels(m model.Metric) *[]string {
+	var labels = make([]string, 0, len(m))
 	for label, value := range m {
 		labels = append(labels, fmt.Sprintf("%s=%s", label, value))
 	}
-	return labels
+	sort.Strings(labels)
+	return &labels
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
-func metricToKeyName(m model.Metric) (keyName string) {
+func metricToKeyName(m model.Metric, labels *[]string) (keyName string) {
 	keyName = string(m[model.MetricNameLabel])
-	labels := make([]string, 0, len(m))
-
-	for label, value := range m {
-		if label != model.MetricNameLabel {
-			labels = append(labels, fmt.Sprintf("%s=\"%s\"", label, value))
-		}
-	}
-	sort.Strings(labels)
-	keyName += "{" + strings.Join(labels, ",") + "}"
+	keyName += "{" + strings.Join(*labels, ",") + "}"
 	return keyName
 }
 
@@ -114,13 +111,13 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 		return nil, err
 	}
 
-	for _, cmd := range commands {
-		err := cmd.Err()
+	for i := range commands {
+		err := commands[i].Err()
 		if err != nil {
 			return nil, err
 		}
 
-		for _, ts := range cmd.Val() {
+		for _, ts := range commands[i].Val() {
 			tsSlice := ts.([]interface{})
 			labels := tsSlice[1].([][]string)
 			tsLabels := make([]*prompb.Label, 0, len(labels))
@@ -130,7 +127,8 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 
 			samples := tsSlice[2].([][]interface{})
 			tsSamples := make([]prompb.Sample, 0, len(samples))
-			for _, sample := range samples {
+			for i := range samples {
+				sample := samples[i]
 				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
 			}
 

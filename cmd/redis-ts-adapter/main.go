@@ -122,17 +122,19 @@ func buildClients(cfg *config) ([]writer, []reader) {
 
 func protoToSamples(req *prompb.WriteRequest) model.Samples {
 	var samples model.Samples
-	for _, ts := range req.Timeseries {
-		metric := make(model.Metric, len(ts.Labels))
-		for _, l := range ts.Labels {
-			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
+	for i := range req.Timeseries {
+		metric := make(model.Metric, len(req.Timeseries[i].Labels))
+		labels := req.Timeseries[i].Labels
+		for j := range labels {
+			metric[model.LabelName(labels[j].Name)] = model.LabelValue(labels[j].Value)
 		}
 
-		for _, s := range ts.Samples {
+		rawSamples := req.Timeseries[i].Samples
+		for j := range rawSamples {
 			samples = append(samples, &model.Sample{
 				Metric:    metric,
-				Value:     model.SampleValue(s.Value),
-				Timestamp: model.Time(s.Timestamp),
+				Value:     model.SampleValue(rawSamples[j].Value),
+				Timestamp: model.Time(rawSamples[j].Timestamp),
 			})
 		}
 	}
@@ -165,13 +167,13 @@ func serve(addr string, writers []writer, readers []reader) error {
 		samples := protoToSamples(&req)
 
 		var wg sync.WaitGroup
-		for _, w := range writers {
+		//for _, w := range writers {
 			wg.Add(1)
 			go func(rw writer) {
 				sendSamples(rw, samples)
 				wg.Done()
-			}(w)
-		}
+			}(writers[0])
+		//}
 		wg.Wait()
 	})
 
