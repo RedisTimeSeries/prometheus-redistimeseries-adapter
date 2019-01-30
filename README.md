@@ -1,9 +1,11 @@
+[![license](https://img.shields.io/github/license/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter)
+[![CircleCI](https://circleci.com/gh/RedisTimeSeries/redis-ts-adapter/tree/master.svg?style=svg&circle-token=508830e660830ee06491b3e566337b6ce50c3355)](https://circleci.com/gh/RedisTimeSeries/redis-ts-adapter/tree/master)
+[![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter/releases/latest)
+
 # Redis TimeSeries Adapter
 Redis TimeSeries Adapter receives [Prometheus][prometheus] metrics via the 
 [remote write][prometheus_remote_write], 
 and writes to [Redis with TimeSeries module][redis_time_series].
-
-[![CircleCI](https://circleci.com/gh/RedisLabs/redis-ts-adapter/tree/master.svg?style=svg&circle-token=508830e660830ee06491b3e566337b6ce50c3355)](https://circleci.com/gh/RedisLabs/redis-ts-adapter/tree/master)
 
 ## Getting Started
 to build the project:
