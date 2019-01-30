@@ -26,6 +26,10 @@ type config struct {
 	remoteTimeout           time.Duration
 	listenAddr              string
 	logLevel                string
+	PoolSize                int
+	IdleTimeout             time.Duration
+	IdleCheckFrequency      time.Duration
+	WriteTimeout            time.Duration
 }
 
 var cfg = &config{}
@@ -53,9 +57,17 @@ func parseFlags() {
 	flag.StringVar(&cfg.listenAddr, "web.listen-address", "127.0.0.1:9201",
 		"Address to listen on for web endpoints.",
 	)
-	flag.StringVar(&cfg.logLevel, "log.level", "debug",
+	flag.StringVar(&cfg.logLevel, "log.level", "info",
 		"Only log messages with the given severity or above. One of: [debug, info, warn, error]",
 	)
+	flag.IntVar(&cfg.PoolSize, "redis-pool-size", 500,
+		"Maximum number of socket connections.")
+	flag.DurationVar(&cfg.IdleTimeout, "redis-idle-timeout", 10*time.Minute,
+		"Amount of time after which client closes idle connections.")
+	flag.DurationVar(&cfg.IdleCheckFrequency, "redis-idle-check-frequency", 30*time.Second,
+		"Frequency of idle checks made by client.")
+	flag.DurationVar(&cfg.WriteTimeout, "redis-write-timeout", 1*time.Minute,
+		"Redis write timeout.")
 
 	flag.Parse()
 	validateConfiguration()
@@ -101,8 +113,12 @@ func buildClients(cfg *config) ([]writer, []reader) {
 	if cfg.redisSentinelAddress != "" {
 		log.WithFields(log.Fields{"sentinel_address": cfg.redisSentinelAddress}).Info("Creating redis sentinel client")
 		client := redis_ts.NewFailoverClient(&redis.FailoverOptions{
-			MasterName:    cfg.redisSentinelMasterName,
-			SentinelAddrs: []string{cfg.redisSentinelAddress},
+			MasterName:         cfg.redisSentinelMasterName,
+			SentinelAddrs:      []string{cfg.redisSentinelAddress},
+			PoolSize:           cfg.PoolSize,
+			IdleTimeout:        cfg.IdleTimeout,
+			IdleCheckFrequency: cfg.IdleCheckFrequency,
+			WriteTimeout:       cfg.WriteTimeout,
 		})
 		readers = append(readers, client)
 		writers = append(writers, client)

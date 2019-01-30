@@ -48,18 +48,6 @@ func TestWriteSingleSample(t *testing.T) {
 			},
 		},
 	}
-	//	model.Samples{
-	//	&model.Sample{
-	//		Metric: model.Metric{
-	//			model.MetricNameLabel: "test_series",
-	//			"label_1":             "value_1",
-	//			"label_2":             "value_2",
-	//		},
-	//		Value:     model.SampleValue(answerToLifeTheUniverse),
-	//		Timestamp: now,
-	//	},
-	//}
-
 	var redisTsClient = NewClient(redisAddress, redisAuth)
 
 	err := redisTsClient.Write(samples)
@@ -100,7 +88,7 @@ func Test_metricToLabels(t *testing.T) {
 		},
 		{
 			Name:  "__name__",
-			Value: "song",
+			Value: "wow",
 		},
 	}
 	m2 := []*prompb.Label{
@@ -118,7 +106,7 @@ func Test_metricToLabels(t *testing.T) {
 		},
 		{
 			Name:  "__name__",
-			Value: "song",
+			Value: "wow",
 		},
 	}
 	m3 := []*prompb.Label{
@@ -129,7 +117,7 @@ func Test_metricToLabels(t *testing.T) {
 		},
 		{
 			Name:  "__name__",
-			Value: "song",
+			Value: "wow",
 		},
 		{
 			Name:  "don't",
@@ -154,9 +142,9 @@ func testMetricToLabels(t *testing.T, l []*prompb.Label) {
 		"don't=know_when",
 	}
 	assert.ElementsMatch(t, expected, *labels)
-	assert.Equal(t, "song", *metricName)
+	assert.Equal(t, "wow", *metricName)
 
 	keyName := metricToKeyName(metricName, labels)
-	expected_key := "song{don't=know_when,i'll=be_back_again,leaving=jet_plane}"
+	expected_key := "wow{don't=know_when,i'll=be_back_again,leaving=jet_plane}"
 	assert.Equal(t, expected_key, keyName)
 }

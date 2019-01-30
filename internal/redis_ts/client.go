@@ -30,7 +30,8 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 }
 
 func add(key *string, labels *[]string, metric *string, timestamp *int64, value *float64) redis.Cmder {
-	args := []interface{}{"TS.ADD", *key}
+	args := make([]interface{}, 0, len(*labels)+3)
+	args = append(args, "TS.ADD", *key)
 	for i := range *labels {
 		args = append(args, (*labels)[i])
 	}
@@ -42,8 +43,14 @@ func add(key *string, labels *[]string, metric *string, timestamp *int64, value 
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
-func (c *Client) Write(timeseries []*prompb.TimeSeries) error {
+func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 	pipe := (*redis.Client)(c).Pipeline()
+	defer func() {
+		err := pipe.Close()
+		if err != nil {
+			returnErr = err
+		}
+	}()
 
 	for i := range timeseries{
 		samples := timeseries[i].Samples
@@ -95,10 +102,16 @@ func metricToKeyName(metric *string, labels *[]string) (keyName string) {
 	return *metric + labelStr
 }
 
-func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
+func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, returnErr error) {
 	var timeSeries []*prompb.TimeSeries
 	results := make([]*prompb.QueryResult, 0, len(req.Queries))
 	pipe := (*redis.Client)(c).Pipeline()
+	defer func() {
+		err := pipe.Close()
+		if err != nil {
+			returnErr = err
+		}
+	}()
 
 	commands := make([]*redis.SliceCmd, 0, len(req.Queries))
 	for _, q := range req.Queries {
@@ -127,19 +140,23 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 
 		for _, ts := range commands[i].Val() {
 			tsSlice := ts.([]interface{})
-			labels := tsSlice[1].([][]string)
+			labels := tsSlice[1].([]interface{})
 			tsLabels := make([]*prompb.Label, 0, len(labels))
 			for _, label := range labels {
-				tsLabels = append(tsLabels, &prompb.Label{Name: label[0], Value: label[1]})
+				parsedLabel := label.([]interface{})
+				tsLabels = append(tsLabels, &prompb.Label{Name: parsedLabel[0].(string), Value: parsedLabel[1].(string)})
 			}
 
-			samples := tsSlice[2].([][]interface{})
+			samples := tsSlice[2].([]interface{})
 			tsSamples := make([]prompb.Sample, 0, len(samples))
 			for i := range samples {
-				sample := samples[i]
-				tsSamples = append(tsSamples, prompb.Sample{Timestamp: sample[0].(int64), Value: sample[1].(float64)})
+				parsedSample := samples[i].([]interface{})
+				value, err := strconv.ParseFloat(parsedSample[1].(string), 64)
+				if err != nil {
+					return nil, err
+				}
+				tsSamples = append(tsSamples, prompb.Sample{Timestamp: parsedSample[0].(int64) * 1000, Value: value})
 			}
-
 			thisSeries := &prompb.TimeSeries{
 				Labels:  tsLabels,
 				Samples: tsSamples,
