@@ -35,7 +35,7 @@ func add(key *string, labels *[]string, metric *string, timestamp *int64, value 
 	for i := range *labels {
 		args = append(args, (*labels)[i])
 	}
-	args = append(args, "__name__=" + *metric)
+	args = append(args, "__name__="+*metric)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	cmd := redis.NewStatusCmd(args...)
@@ -52,7 +52,7 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 		}
 	}()
 
-	for i := range timeseries{
+	for i := range timeseries {
 		samples := timeseries[i].Samples
 		labels, metric := metricToLabels(timeseries[i].Labels)
 		key := metricToKeyName(metric, labels)
@@ -81,7 +81,7 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 
 // Returns labels in string format (key=value), but as slice of interfaces.
 func metricToLabels(l []*prompb.Label) (*[]string, *string) {
-	var labels = make([]string, 0, len(l) - 1)
+	var labels = make([]string, 0, len(l)-1)
 	var metric = ""
 	for i := range l {
 		if l[i].Name == "__name__" {

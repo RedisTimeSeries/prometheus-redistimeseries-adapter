@@ -43,7 +43,7 @@ func TestWriteSingleSample(t *testing.T) {
 			Samples: []prompb.Sample{
 				{
 					Timestamp: now.Unix(),
-					Value: answerToLifeTheUniverse,
+					Value:     answerToLifeTheUniverse,
 				},
 			},
 		},
