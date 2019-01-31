@@ -22,7 +22,7 @@ image: $(BIN_PATH)
 	docker build -t $(DOCKER_IMAGE):$(DOCKER_IMAGE_TAG) -f build/adapter.Dockerfile build/
 
 clean:
-	rm bin/*
+	rm -f bin/*
 
 test:
 	go test -v -cover ./...

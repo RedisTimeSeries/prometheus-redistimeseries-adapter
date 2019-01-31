@@ -2,18 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/go-redis/redis"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/RedisLabs/redis-ts-adapter/internal/redis_ts"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
-	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 	log "github.com/sirupsen/logrus"
 )
@@ -98,7 +95,7 @@ func setupLogger() {
 }
 
 type writer interface {
-	Write(samples model.Samples) error
+	Write(samples []*prompb.TimeSeries) error
 	Name() string
 }
 
@@ -107,9 +104,7 @@ type reader interface {
 	Name() string
 }
 
-func buildClients(cfg *config) ([]writer, []reader) {
-	var writers []writer
-	var readers []reader
+func buildClient(cfg *config) *redis_ts.Client {
 	if cfg.redisSentinelAddress != "" {
 		log.WithFields(log.Fields{"sentinel_address": cfg.redisSentinelAddress}).Info("Creating redis sentinel client")
 		client := redis_ts.NewFailoverClient(&redis.FailoverOptions{
@@ -120,42 +115,21 @@ func buildClients(cfg *config) ([]writer, []reader) {
 			IdleCheckFrequency: cfg.IdleCheckFrequency,
 			WriteTimeout:       cfg.WriteTimeout,
 		})
-		readers = append(readers, client)
-		writers = append(writers, client)
+		return client
 	}
 	if cfg.redisAddress != "" {
 		log.WithFields(log.Fields{"redis_ts_address": cfg.redisAddress}).Info("Creating redis TS client")
 		client := redis_ts.NewClient(
 			cfg.redisAddress,
 			cfg.redisAuth)
-		readers = append(readers, client)
-		writers = append(writers, client)
+		return client
 	}
 	// TODO: build redis reader here
 	log.Info("Starting up...")
-	return writers, readers
+	return nil
 }
 
-func protoToSamples(req *prompb.WriteRequest) model.Samples {
-	var samples model.Samples
-	for _, ts := range req.Timeseries {
-		metric := make(model.Metric, len(ts.Labels))
-		for _, l := range ts.Labels {
-			metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
-		}
-
-		for _, s := range ts.Samples {
-			samples = append(samples, &model.Sample{
-				Metric:    metric,
-				Value:     model.SampleValue(s.Value),
-				Timestamp: model.Time(s.Timestamp),
-			})
-		}
-	}
-	return samples
-}
-
-func serve(addr string, writers []writer, readers []reader) error {
+func serve(addr string, writer writer, reader reader) error {
 	http.HandleFunc("/write", func(w http.ResponseWriter, r *http.Request) {
 		compressed, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -177,18 +151,7 @@ func serve(addr string, writers []writer, readers []reader) error {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		samples := protoToSamples(&req)
-
-		var wg sync.WaitGroup
-		for _, w := range writers {
-			wg.Add(1)
-			go func(rw writer) {
-				sendSamples(rw, samples)
-				wg.Done()
-			}(w)
-		}
-		wg.Wait()
+		sendSamples(writer, req.Timeseries)
 	})
 
 	http.HandleFunc("/read", func(w http.ResponseWriter, r *http.Request) {
@@ -213,12 +176,10 @@ func serve(addr string, writers []writer, readers []reader) error {
 			return
 		}
 
-		// TODO: Support reading from more than one reader and merging the results.
-		if len(readers) != 1 {
-			http.Error(w, fmt.Sprintf("expected exactly one reader, found %d readers", len(readers)), http.StatusInternalServerError)
+		if reader == nil {
+			http.Error(w, "Cannot serve data to an invalid reader", http.StatusInternalServerError)
 			return
 		}
-		reader := readers[0]
 
 		var resp *prompb.ReadResponse
 		resp, err = reader.Read(&req)
@@ -248,15 +209,15 @@ func serve(addr string, writers []writer, readers []reader) error {
 }
 
 func main() {
-	writers, readers := buildClients(cfg)
+	client := buildClient(cfg)
 	log.WithFields(log.Fields{"address": cfg.listenAddr}).Info("listening...")
-	if err := serve(cfg.listenAddr, writers, readers); err != nil {
+	if err := serve(cfg.listenAddr, client, client); err != nil {
 		log.WithFields(log.Fields{"address": cfg.listenAddr, "err": err}).Error("Failed to listen")
 		os.Exit(1)
 	}
 }
 
-func sendSamples(w writer, samples model.Samples) {
+func sendSamples(w writer, samples []*prompb.TimeSeries) {
 	err := w.Write(samples)
 	if err != nil {
 		log.WithFields(log.Fields{"storage": w.Name(), "err": err, "num_samples": len(samples)}).Warn("Could not send samples to remote storage")
