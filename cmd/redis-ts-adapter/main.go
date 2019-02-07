@@ -11,6 +11,7 @@ import (
 	"github.com/RedisLabs/redis-ts-adapter/internal/redis_ts"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/pkg/profile"
 	"github.com/prometheus/prometheus/prompb"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,6 +25,7 @@ type config struct {
 	listenAddr              string
 	logLevel                string
 	PoolSize                int
+	Profile                 bool
 	IdleTimeout             time.Duration
 	IdleCheckFrequency      time.Duration
 	WriteTimeout            time.Duration
@@ -65,6 +67,7 @@ func parseFlags() {
 		"Frequency of idle checks made by client.")
 	flag.DurationVar(&cfg.WriteTimeout, "redis-write-timeout", 1*time.Minute,
 		"Redis write timeout.")
+	flag.BoolVar(&cfg.Profile, "profile", false, "Run with profile")
 
 	flag.Parse()
 	validateConfiguration()
@@ -209,6 +212,10 @@ func serve(addr string, writer writer, reader reader) error {
 }
 
 func main() {
+	if cfg.Profile {
+		defer profile.Start().Stop()
+	}
+
 	client := buildClient(cfg)
 	log.WithFields(log.Fields{"address": cfg.listenAddr}).Info("listening...")
 	if err := serve(cfg.listenAddr, client, client); err != nil {
