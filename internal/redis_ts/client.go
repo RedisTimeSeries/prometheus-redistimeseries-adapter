@@ -1,6 +1,7 @@
 package redis_ts
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/prometheus/prometheus/prompb"
@@ -82,24 +83,32 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 // Returns labels in string format (key=value), but as slice of interfaces.
 func metricToLabels(l []*prompb.Label) (*[]string, *string) {
 	var labels = make([]string, 0, len(l)-1)
-	var metric = ""
+	var metric *string
+	var buf bytes.Buffer
 	for i := range l {
 		if l[i].Name == "__name__" {
-			metric = l[i].Value
+			metric = &l[i].Value
 		} else {
-			labels = append(labels, fmt.Sprintf("%s=%s", l[i].Name, l[i].Value))
+			buf.Reset()
+			buf.WriteString(l[i].Name)
+			buf.WriteString("=")
+			buf.WriteString(l[i].Value)
+			labels = append(labels, buf.String())
 		}
 	}
 	sort.Strings(labels)
-	return &labels, &metric
+	return &labels, metric
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
 func metricToKeyName(metric *string, labels *[]string) (keyName string) {
-	//keyName = string(m[model.MetricNameLabel])
-	labelStr := "{" + strings.Join(*labels, ",") + "}"
-	return *metric + labelStr
+	var buf bytes.Buffer
+	buf.WriteString(*metric)
+	buf.WriteString("{")
+	buf.WriteString(strings.Join(*labels, ","))
+	buf.WriteString("}")
+	return buf.String()
 }
 
 func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, returnErr error) {
