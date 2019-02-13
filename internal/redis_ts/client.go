@@ -36,7 +36,7 @@ func add(key *string, labels *[]string, metric *string, timestamp *int64, value 
 		args = append(args, (*labels)[i])
 	}
 	args = append(args, "__name__="+*metric)
-	args = append(args, strconv.FormatInt(*timestamp, 10))
+	args = append(args, strconv.FormatInt(*timestamp/1000, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
