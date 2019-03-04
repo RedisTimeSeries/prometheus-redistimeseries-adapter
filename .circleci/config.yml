@@ -12,34 +12,11 @@ jobs:
 
     working_directory: /go/src/github.com/RedisLabs/redis-ts-adapter
     steps:
+    - setup_remote_docker
     - checkout
 
-    # install redis
-    - run: git clone -b 5.0 --depth 1 https://github.com/antirez/redis.git
-    - run: cd redis && sudo make -j install
-
-    # install redis-timeseries
-    - run: git clone -b labels https://github.com/RedisLabsModules/redis-timeseries.git
-    - run: |
-        cd redis-timeseries
-        git submodule init
-        git submodule update
-        cd src
-        make -j all
-
-    # run redis with module
-    - run: |
-        redis-server --daemonize yes --loadmodule redis-timeseries/src/redis-tsdb-module.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360
-        sleep 1
-
-    # run sentinel
-    - run: |
-        echo daemonize yes > sentinel.conf
-        echo sentinel monitor mymaster 127.0.0.1 6379 1 >> sentinel.conf
-        redis-sentinel sentinel.conf
-
     # run tests and lint
-    - run: make test
+    - run: make dockerized_test
     - run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sudo bash -s -- -b $GOPATH/bin v1.11.1
     - run: make lint
 

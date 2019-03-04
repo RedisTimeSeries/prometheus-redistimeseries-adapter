@@ -30,15 +30,16 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func add(key *string, labels *[]string, metric *string, timestamp *int64, value *float64) redis.Cmder {
-	args := make([]interface{}, 0, len(*labels)+3)
+func add(key *string, labels []*prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
+	args := make([]interface{}, 0, len(labels)+3)
 	args = append(args, "TS.ADD", *key)
-	for i := range *labels {
-		args = append(args, (*labels)[i])
-	}
-	args = append(args, "__name__="+*metric)
 	args = append(args, strconv.FormatInt(*timestamp/1000, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
+	args = append(args, "LABELS")
+	for i := range labels {
+		args = append(args, labels[i].Name, labels[i].Value)
+	}
+	args = append(args, "__name__", *metric)
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
 }
@@ -68,7 +69,7 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 				continue
 			}
 
-			cmd := add(&key, labels, metric, &sample.Timestamp, &sample.Value)
+			cmd := add(&key, timeseries[i].Labels, metric, &sample.Timestamp, &sample.Value)
 			err := pipe.Process(cmd)
 			if err != nil {
 				return err
@@ -181,10 +182,12 @@ func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, 
 
 func (c *Client) rangeByLabels(labelMatchers []interface{}, start int64, end int64) *redis.SliceCmd {
 	args := make([]interface{}, 0, len(labelMatchers)+3)
-	args = append(args, "TS.RANGEBYLABELS")
-	args = append(args, labelMatchers...)
+	args = append(args, "TS.MRANGE")
 	args = append(args, start)
 	args = append(args, end)
+	args = append(args, "FILTER")
+	args = append(args, labelMatchers...)
+	log.WithFields(log.Fields{"args": args}).Debug("ts.mrange")
 	cmd := redis.NewSliceCmd(args...)
 	return cmd
 }
