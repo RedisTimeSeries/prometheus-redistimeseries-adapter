@@ -3,6 +3,7 @@ SRC_PKG = github.com/RedisLabs/redis-ts-adapter
 DOCKER_IMAGE ?= redislabs/redis-ts-adapter
 DOCKER_IMAGE_TAG ?= beta
 DOCKER_BUILDER = redislabs/adapter-builder
+TESTER_IMAGE = redislabs/ts-adapter-tester
 BIN_PATH = $(BINDIR)/redis_ts_adapter
 
 build:
@@ -26,6 +27,10 @@ clean:
 
 test:
 	go test -v -cover ./...
+
+dockerized_test:
+	docker build -t $(TESTER_IMAGE) -f build/tester.Dockerfile .
+	docker run $(TESTER_IMAGE)
 
 lint:
 	golangci-lint run -E gofmt
