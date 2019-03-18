@@ -1,5 +1,5 @@
 [![license](https://img.shields.io/github/license/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter)
-[![CircleCI](https://circleci.com/gh/RedisTimeSeries/redis-ts-adapter/tree/master.svg?style=svg&circle-token=508830e660830ee06491b3e566337b6ce50c3355)](https://circleci.com/gh/RedisTimeSeries/redis-ts-adapter/tree/master)
+[![CircleCI](https://circleci.com/gh/RedisTimeSeries/prometheus-redistimeseries-adapter/tree/master.svg?style=svg)](https://circleci.com/gh/RedisTimeSeries/prometheus-redistimeseries-adapter/tree/master)
 [![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter/releases/latest)
 
 # Prometheus-RedisTimeSeries Adapter
