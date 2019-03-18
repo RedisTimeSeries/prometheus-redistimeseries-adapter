@@ -1,9 +1,16 @@
-FROM alpine:3.6
+FROM golang:1.11.1 as builder
 
+WORKDIR /go/src/github.com/RedisLabs/redis-ts-adapter
+COPY . .
+RUN mkdir -p /go/src/github.com/RedisLabs/redis-ts-adapter
+RUN CGO_ENABLED=0 go build -o redis-ts-adapter cmd/redis-ts-adapter/main.go
+
+
+FROM alpine:3.6
 WORKDIR /adapter
 RUN adduser -D redis-adapter
 USER redis-adapter
 
-COPY redis_ts_adapter /usr/local/bin/redis_ts_adapter
+COPY --from=builder /go/src/github.com/RedisLabs/redis-ts-adapter/redis-ts-adapter .
 
-ENTRYPOINT /usr/local/bin/redis_ts_adapter
+ENTRYPOINT ./redis_ts_adapter

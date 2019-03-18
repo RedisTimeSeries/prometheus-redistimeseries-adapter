@@ -18,9 +18,8 @@ dockerized_make: docker_build_image
 $(BIN_PATH):
 	$(MAKE) build
 
-image: $(BIN_PATH)
-	cp $(BIN_PATH) build/
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_IMAGE_TAG) -f build/adapter.Dockerfile build/
+image:
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_IMAGE_TAG) -f build/adapter.Dockerfile .
 
 clean:
 	rm -f bin/*
