@@ -19,7 +19,7 @@ $(BIN_PATH):
 	$(MAKE) build
 
 image:
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_IMAGE_TAG) -f build/adapter.Dockerfile .
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_IMAGE_TAG) .
 
 clean:
 	rm -f bin/*
