@@ -1,0 +1,2 @@
+remote_read:
+  - url: "http://adapter:9201/read"

@@ -1,0 +1,20 @@
+version: '3'
+services:
+  prometheus:
+    image: "prom/prometheus:v2.8.0"
+    command: ["--config.file=/prometheus.yml"]
+    volumes:
+      - ./prometheus.yaml:/prometheus.yml
+    ports:
+      - 9090:9090
+  adapter:
+    image: "redislabs/prometheus-redistimeseries-adapter:master"
+    command: ["-redis-address", "redis:6379", "-web.listen-address", "0.0.0.0:9201"]
+  redis:
+    image: "redislabs/redistimeseries:edge"
+    ports:
+      - "6379:6379"
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
