@@ -13,6 +13,7 @@ You can tryout the Prometheus-RedisTimeSeries and RedisTimeSeries with Prometheu
 cd compose
 docker-compose up
 ```
+Grafana can be accessed on port 3000 (admin:admin) Prometheus on port 9090
 
 ## Getting Started
 to build the project:
