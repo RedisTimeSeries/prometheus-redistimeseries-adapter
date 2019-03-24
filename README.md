@@ -7,6 +7,13 @@ Redis TimeSeries Adapter receives [Prometheus][prometheus] metrics via the
 [remote write][prometheus_remote_write], 
 and writes to [Redis with TimeSeries module][redis_time_series].
 
+## QuickStart
+You can tryout the Prometheus-RedisTimeSeries and RedisTimeSeries with Prometheus and Grafana in a single docker compose
+```bash
+cd compose
+docker-compose up
+```
+
 ## Getting Started
 to build the project:
 ```bash
