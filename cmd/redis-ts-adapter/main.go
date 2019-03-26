@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/RedisLabs/redis-ts-adapter/internal/redis_ts"
+	"github.com/RedisTimeSeries/prometheus-redistimeseries-adapter/internal/redis_ts"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/pkg/profile"
