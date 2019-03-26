@@ -12,11 +12,11 @@ RUN cd redis-timeseries && \
 RUN echo daemonize yes > /tmp/sentinel.conf
 RUN echo sentinel monitor mymaster 127.0.0.1 6379 1 >> /tmp/sentinel.conf
 
-WORKDIR /go/src/github.com/RedisLabs/redis-ts-adapter
-RUN mkdir -p /go/src/github.com/RedisLabs/redis-ts-adapter
+WORKDIR /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
+RUN mkdir -p /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 
 # This is not nessecerly the right way to do it, but it makes circleci works because it uses a remote docker host
-COPY . /go/src/github.com/RedisLabs/redis-ts-adapter
+COPY . /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 #ENTRYPOINT /bin/bash
 CMD redis-sentinel /tmp/sentinel.conf && \
         redis-server --daemonize yes --loadmodule /go/redis-timeseries/src/redistimeseries.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360 && \

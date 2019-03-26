@@ -1,5 +1,5 @@
 BINDIR  ?= bin
-SRC_PKG = github.com/RedisLabs/redis-ts-adapter
+SRC_PKG = github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 DOCKER_IMAGE ?= redislabs/redis-ts-adapter
 DOCKER_IMAGE_TAG ?= beta
 DOCKER_BUILDER = redislabs/adapter-builder

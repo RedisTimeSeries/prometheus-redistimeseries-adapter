@@ -1,7 +1,7 @@
 FROM golang:1.11.1
 
-WORKDIR /go/src/github.com/RedisLabs/redis-ts-adapter
-RUN mkdir -p /go/src/github.com/RedisLabs/redis-ts-adapter
+WORKDIR /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
+RUN mkdir -p /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 
 
 # Build and install redis-server

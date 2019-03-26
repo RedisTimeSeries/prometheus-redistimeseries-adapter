@@ -74,10 +74,10 @@ redis-ts-adapter --web.listen-address 127.0.0.1:9201
 [Contribution guidelines for this project](CONTRIBUTING.md)
 
 ## Releases
-See the [releases on this repository](https://github.com/RedisLabs/redis-ts-adapter/releases).
+See the [releases on this repository](https://github.com/RedisTimeSeries/prometheus-redistimeseries-adapter/releases).
 
 ## Contributors
-See also the list of [contributors](https://github.com/RedisLabs/redis-ts-adapter/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/RedisTimeSeries/prometheus-redistimeseries-adapter/contributors) who participated in this project.
 
 ## License
 
@@ -93,4 +93,4 @@ See the [LICENSE](LICENSE) file for details.
 [prometheus_remote_write]: https://prometheus.io/docs/prometheus/latest/storage/#remote-storage-integrations
 [prometheus_remote_write_config]: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#%3Cremote_write%3E
 [redis_time_series]: https://github.com/RedisLabsModules/redis-timeseries
-[project_github_url]: https://github.com/RedisLabs/redis-ts-adapter
+[project_github_url]: https://github.com/RedisTimeSeries/prometheus-redistimeseries-adapter/internal/redis_ts
