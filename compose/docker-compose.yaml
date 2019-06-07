@@ -15,6 +15,6 @@ services:
     ports:
       - "6379:6379"
   grafana:
-    image: grafana/grafana
+    build: ./grafana/
     ports:
       - "3000:3000"
