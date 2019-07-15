@@ -1,6 +1,7 @@
 [![license](https://img.shields.io/github/license/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter)
 [![CircleCI](https://circleci.com/gh/RedisTimeSeries/prometheus-redistimeseries-adapter/tree/master.svg?style=svg)](https://circleci.com/gh/RedisTimeSeries/prometheus-redistimeseries-adapter/tree/master)
 [![GitHub issues](https://img.shields.io/github/release/RedisTimeSeries/redis-ts-adapter.svg)](https://github.com/RedisTimeSeries/redis-ts-adapter/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/RedisTimeSeries/prometheus-redistimeseries-adapter)](https://goreportcard.com/report/RedisTimeSeries/prometheus-redistimeseries-adapter)
 
 # Prometheus-RedisTimeSeries Adapter
 Redis TimeSeries Adapter receives [Prometheus][prometheus] metrics via the 
