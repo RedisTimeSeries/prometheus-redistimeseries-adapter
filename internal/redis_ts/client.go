@@ -15,6 +15,8 @@ import (
 type Client redis.Client
 type StatusCmd redis.StatusCmd
 
+const nameLabel = "__name__"
+
 // NewClient creates a new Client.
 func NewClient(address string, auth string) *Client {
 	client := redis.NewClient(&redis.Options{
@@ -36,10 +38,16 @@ func add(key *string, labels []*prompb.Label, metric *string, timestamp *int64, 
 	args = append(args, strconv.FormatInt(*timestamp/1000, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	args = append(args, "LABELS")
+	hasNameLabel := false
 	for i := range labels {
 		args = append(args, labels[i].Name, labels[i].Value)
+		if labels[i].Name == nameLabel {
+			hasNameLabel = true
+		}
 	}
-	args = append(args, "__name__", *metric)
+	if !hasNameLabel {
+		args = append(args, nameLabel, *metric)
+	}
 	cmd := redis.NewStatusCmd(args...)
 	return cmd
 }
