@@ -25,3 +25,19 @@ jobs:
     - store_artifacts:
         path: bin/redis_ts_adapter
         destination: redis_ts_adapter
+
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - build
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - build
