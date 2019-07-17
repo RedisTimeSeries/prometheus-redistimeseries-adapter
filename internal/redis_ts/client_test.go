@@ -3,9 +3,9 @@ package redis_ts
 import (
 	"github.com/prometheus/prometheus/prompb"
 	"testing"
+	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,10 +21,12 @@ var redisClient = redis.NewClient(&redis.Options{
 })
 
 func TestWriteSingleSample(t *testing.T) {
-	now := model.Now()
+	now := time.Now()
 	answerToLifeTheUniverse := 42.1
 
-	samples := []*prompb.TimeSeries{
+	redisClient.Del("test_series{label_1=value_1,label_2=value_2}")
+
+	insertedSamples := []*prompb.TimeSeries{
 		{
 			Labels: []*prompb.Label{
 				{
@@ -42,7 +44,15 @@ func TestWriteSingleSample(t *testing.T) {
 			},
 			Samples: []prompb.Sample{
 				{
-					Timestamp: now.Unix() * 1000,
+					Timestamp: now.UnixNano() / 1000,
+					Value:     answerToLifeTheUniverse,
+				},
+				{
+					Timestamp: now.UnixNano()/1000 + 1,
+					Value:     answerToLifeTheUniverse,
+				},
+				{
+					Timestamp: now.UnixNano()/1000 + 2,
 					Value:     answerToLifeTheUniverse,
 				},
 			},
@@ -50,18 +60,37 @@ func TestWriteSingleSample(t *testing.T) {
 	}
 	var redisTsClient = NewClient(redisAddress, redisAuth)
 
-	err := redisTsClient.Write(samples)
+	err := redisTsClient.Write(insertedSamples)
 	assert.Nil(t, err, "Write of samples failed")
 
 	keys := redisClient.Keys("test_series{label_1=value_1,label_2=value_2}").Val()
 	assert.Len(t, keys, 1)
-	labelsMatchers := []interface{}{"label_1=value_1"}
-	cmd := redisTsClient.rangeByLabels(labelsMatchers, 0, now.Unix()+5)
-	err = redisTsClient.Process(cmd)
-	assert.Nil(t, err, "rangeByLabels failed to process")
-	ranges, err := cmd.Result()
-	assert.Nil(t, err, "rangeByLabels failed")
-	assert.Len(t, ranges, 1)
+
+	request := prompb.ReadRequest{
+		Queries: []*prompb.Query{
+			{
+				StartTimestampMs: 0,
+				EndTimestampMs:   int64(now.Add(time.Second*5).UnixNano() / 1000),
+				Matchers: []*prompb.LabelMatcher{
+					{
+						Type:  prompb.LabelMatcher_EQ,
+						Name:  "label_1",
+						Value: "value_1",
+					},
+					{
+						Type:  prompb.LabelMatcher_EQ,
+						Name:  "label_2",
+						Value: "value_2",
+					},
+				},
+			},
+		},
+	}
+	result, err := redisTsClient.Read(&request)
+	assert.Nil(t, err, "failed to process query")
+	assert.Len(t, result.Results, 1)
+	assert.Len(t, result.Results[0].Timeseries, 1)
+	assert.Equal(t, insertedSamples, result.Results[0].Timeseries)
 }
 
 func TestNewFailoverClient(t *testing.T) {

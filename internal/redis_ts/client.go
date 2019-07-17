@@ -35,7 +35,7 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 func add(key *string, labels []*prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
 	args := make([]interface{}, 0, len(labels)+3)
 	args = append(args, "TS.ADD", *key)
-	args = append(args, strconv.FormatInt(*timestamp/1000, 10))
+	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	args = append(args, "LABELS")
 	hasNameLabel := false
@@ -137,7 +137,7 @@ func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, 
 		if err != nil {
 			return nil, err
 		}
-		cmd := c.rangeByLabels(labelMatchers, q.StartTimestampMs/1000, q.EndTimestampMs/1000)
+		cmd := c.rangeByLabels(labelMatchers, q.StartTimestampMs, q.EndTimestampMs)
 		err = pipe.Process(cmd)
 		if err != nil {
 			return nil, err
@@ -173,7 +173,7 @@ func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, 
 				if err != nil {
 					return nil, err
 				}
-				tsSamples = append(tsSamples, prompb.Sample{Timestamp: parsedSample[0].(int64) * 1000, Value: value})
+				tsSamples = append(tsSamples, prompb.Sample{Timestamp: parsedSample[0].(int64), Value: value})
 			}
 			thisSeries := &prompb.TimeSeries{
 				Labels:  tsLabels,
