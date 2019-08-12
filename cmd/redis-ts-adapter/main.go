@@ -117,6 +117,7 @@ func buildClient(cfg *config) *redis_ts.Client {
 			IdleTimeout:        cfg.IdleTimeout,
 			IdleCheckFrequency: cfg.IdleCheckFrequency,
 			WriteTimeout:       cfg.WriteTimeout,
+			Password:           cfg.redisAuth,
 		})
 		return client
 	}
