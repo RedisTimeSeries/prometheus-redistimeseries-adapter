@@ -34,7 +34,7 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 
 const TS_ADD = "TS.ADD"
 const LABELS = "LABELS"
-func add(key string, labels []*prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
+func add(key string, labels []prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
 	args := make([]interface{}, 0, len(labels)*2+7)
 	args = append(args, TS_ADD, key)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
@@ -55,7 +55,7 @@ func add(key string, labels []*prompb.Label, metric *string, timestamp *int64, v
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
-func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
+func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	pipe := (*redis.Client)(c).Pipeline()
 	defer func() {
 		err := pipe.Close()
@@ -92,7 +92,7 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(l []*prompb.Label) (*[]string, *string) {
+func metricToLabels(l []prompb.Label) (*[]string, *string) {
 	var labels = make([]string, 0, len(l))
 	var metric *string
 	var buf bytes.Buffer
@@ -161,10 +161,10 @@ func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, 
 		for _, ts := range commands[i].Val() {
 			tsSlice := ts.([]interface{})
 			labels := tsSlice[1].([]interface{})
-			tsLabels := make([]*prompb.Label, 0, len(labels))
+			tsLabels := make([]prompb.Label, 0, len(labels))
 			for _, label := range labels {
 				parsedLabel := label.([]interface{})
-				tsLabels = append(tsLabels, &prompb.Label{Name: parsedLabel[0].(string), Value: parsedLabel[1].(string)})
+				tsLabels = append(tsLabels, prompb.Label{Name: parsedLabel[0].(string), Value: parsedLabel[1].(string)})
 			}
 
 			samples := tsSlice[2].([]interface{})

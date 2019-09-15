@@ -98,7 +98,7 @@ func setupLogger() {
 }
 
 type writer interface {
-	Write(samples []*prompb.TimeSeries) error
+	Write(samples []prompb.TimeSeries) error
 	Name() string
 }
 
@@ -150,7 +150,7 @@ func serve(addr string, writer writer, reader reader) error {
 		}
 
 		var req prompb.WriteRequest
-		if err := proto.Unmarshal(reqBuf, &req); err != nil {
+		if err := req.Unmarshal(reqBuf); err != nil {
 			log.WithFields(log.Fields{"err": err.Error()}).Error("Unmarshal error")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -225,7 +225,7 @@ func main() {
 	}
 }
 
-func sendSamples(w writer, samples []*prompb.TimeSeries) {
+func sendSamples(w writer, samples []prompb.TimeSeries) {
 	err := w.Write(samples)
 	if err != nil {
 		log.WithFields(log.Fields{"storage": w.Name(), "err": err, "num_samples": len(samples)}).Warn("Could not send samples to remote storage")
