@@ -1,13 +1,12 @@
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/go-redis/redis v6.14.2+incompatible
+# github.com/go-redis/redis v6.15.5+incompatible
 github.com/go-redis/redis
 github.com/go-redis/redis/internal
 github.com/go-redis/redis/internal/consistenthash
 github.com/go-redis/redis/internal/hashtag
 github.com/go-redis/redis/internal/pool
 github.com/go-redis/redis/internal/proto
-github.com/go-redis/redis/internal/singleflight
 github.com/go-redis/redis/internal/util
 # github.com/gogo/protobuf v1.1.1
 github.com/gogo/protobuf/proto
