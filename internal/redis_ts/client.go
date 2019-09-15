@@ -32,12 +32,14 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	return (*Client)(client)
 }
 
-func add(key *string, labels []*prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
-	args := make([]interface{}, 0, len(labels)+3)
-	args = append(args, "TS.ADD", *key)
+const TS_ADD = "TS.ADD"
+const LABELS = "LABELS"
+func add(key string, labels []*prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
+	args := make([]interface{}, 0, len(labels)*2+7)
+	args = append(args, TS_ADD, key)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
-	args = append(args, "LABELS")
+	args = append(args, LABELS)
 	hasNameLabel := false
 	for i := range labels {
 		args = append(args, labels[i].Name, labels[i].Value)
@@ -48,7 +50,7 @@ func add(key *string, labels []*prompb.Label, metric *string, timestamp *int64, 
 	if !hasNameLabel {
 		args = append(args, nameLabel, *metric)
 	}
-	cmd := redis.NewStatusCmd(args...)
+	cmd := redis.NewStringCmd(args...)
 	return cmd
 }
 
@@ -77,7 +79,7 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 				continue
 			}
 
-			cmd := add(&key, timeseries[i].Labels, metric, &sample.Timestamp, &sample.Value)
+			cmd := add(key, timeseries[i].Labels, metric, &sample.Timestamp, &sample.Value)
 			err := pipe.Process(cmd)
 			if err != nil {
 				return err
@@ -91,11 +93,11 @@ func (c *Client) Write(timeseries []*prompb.TimeSeries) (returnErr error) {
 
 // Returns labels in string format (key=value), but as slice of interfaces.
 func metricToLabels(l []*prompb.Label) (*[]string, *string) {
-	var labels = make([]string, 0, len(l)-1)
+	var labels = make([]string, 0, len(l))
 	var metric *string
 	var buf bytes.Buffer
 	for i := range l {
-		if l[i].Name == "__name__" {
+		if l[i].Name == nameLabel {
 			metric = &l[i].Value
 		} else {
 			buf.Reset()

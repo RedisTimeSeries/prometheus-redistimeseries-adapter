@@ -34,8 +34,6 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/pkg/profile
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/prometheus/common v0.0.0-20181116084131-1f2c4f3cd6db
-github.com/prometheus/common/model
 # github.com/prometheus/prometheus v2.5.0+incompatible
 github.com/prometheus/prometheus/prompb
 # github.com/sirupsen/logrus v1.2.0
