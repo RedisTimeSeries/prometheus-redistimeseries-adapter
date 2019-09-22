@@ -66,7 +66,7 @@ func Testadd(c *Client, key string, labels []prompb.Label, metric string, timest
 func (c *Client) add(key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
 	// TODO: make TS_ADD, LABELS, key and actual labels interface{} cached
 	args := make([]string, 0, len(labels)*2+7)
-	args = append(args, TS_ADD, key)
+	args = append(args, key)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
 	args = append(args, LABELS)
