@@ -117,7 +117,7 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	}
 
 	// TODO: ignore errors for debugging
-	_ := c.rpool.Do(radix.Pipeline(cmds...))
+	_ = c.rpool.Do(radix.Pipeline(cmds...))
 
 	return nil
 }
