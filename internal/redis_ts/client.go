@@ -102,7 +102,7 @@ func (c *Client) getBuffer() *bytes.Buffer {
 	if bb := c.bufferPool.Get(); bb != nil {
 		return bb.(*bytes.Buffer)
 	}
-	return new(bytes.Buffer)
+	return bytes.NewBuffer(make([]byte, 1024))
 }
 
 func (c *Client) getCmdActionSlice() []radix.CmdAction {
@@ -151,6 +151,7 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	_ = c.rpool.Do(radix.Pipeline(cmds...))
 	c.objPool.Put(args)
 	c.bufferPool.Put(buf)
+	c.cmdActionSlicePool.Put(cmds)
 
 	return nil
 }
