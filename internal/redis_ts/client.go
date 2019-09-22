@@ -122,9 +122,9 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	//	}
 	//}()
 
-	cmds := c.getCmdActionSlice() //make([]radix.CmdAction, 0, len(timeseries))
-	args := c.getArgs()
-	buf := c.getBuffer()
+	cmds := make([]radix.CmdAction, 0, len(timeseries))
+	args := make([]string, 0, 100)
+	buf := bytes.NewBuffer(make([]byte, 1024))
 	for i := range timeseries {
 		samples := timeseries[i].Samples
 		cmds = cmds[:0]
@@ -149,9 +149,9 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 
 	// TODO: ignore errors for debugging
 	_ = c.rpool.Do(radix.Pipeline(cmds...))
-	c.objPool.Put(args)
-	c.bufferPool.Put(buf)
-	c.cmdActionSlicePool.Put(cmds)
+	//c.objPool.Put(args)
+	//c.bufferPool.Put(buf)
+	//c.cmdActionSlicePool.Put(cmds)
 
 	return nil
 }
