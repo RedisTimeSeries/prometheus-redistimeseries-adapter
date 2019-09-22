@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,9 @@ type Client struct {
 
 	Cache lru.Cache
 	rpool *radix.Pool
+	objPool sync.Pool
+	bufferPool sync.Pool
+	cmdActionSlicePool sync.Pool
 }
 type StatusCmd redis.StatusCmd
 
@@ -87,6 +91,27 @@ func (c *Client) add(args []string, key string, labels []prompb.Label, metric st
 	return cmd
 }
 
+func (c *Client) getArgs() []string {
+	if strSlice := c.objPool.Get(); strSlice != nil {
+		return strSlice.([]string)
+	}
+	return make([]string, 0, 100)
+}
+
+func (c *Client) getBuffer() *bytes.Buffer {
+	if bb := c.bufferPool.Get(); bb != nil {
+		return bb.(*bytes.Buffer)
+	}
+	return new(bytes.Buffer)
+}
+
+func (c *Client) getCmdActionSlice() []radix.CmdAction {
+	if ca := c.cmdActionSlicePool.Get(); ca != nil {
+		return ca.([]radix.CmdAction)
+	}
+	return make([]radix.CmdAction, 0, 100)
+}
+
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	//pipe := c.Pipeline()
@@ -97,16 +122,17 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	//	}
 	//}()
 
-	cmds := make([]radix.CmdAction, 0, len(timeseries))
-	args := make([]string, 0, 100)
-	var buf bytes.Buffer
+	cmds := c.getCmdActionSlice() //make([]radix.CmdAction, 0, len(timeseries))
+	args := c.getArgs()
+	buf := c.getBuffer()
 	for i := range timeseries {
 		samples := timeseries[i].Samples
 		cmds = cmds[:0]
 		buf.Reset()
 		labels, metric := metricToLabels(timeseries[i].Labels, buf)
+		buf.Reset()
 		key := metricToKeyName(metric, labels, buf)
-		if *metric == "" {
+		if metric == "" {
 			log.WithFields(log.Fields{"Metric": timeseries[i].Labels}).Info("Cannot send unnamed sample to RedisTS, skipping")
 			continue
 		}
@@ -116,24 +142,26 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 				continue
 			}
 
-			cmd := c.add(args, key, timeseries[i].Labels, *metric, &samples[j].Timestamp, &samples[j].Value)
+			cmd := c.add(args, key, timeseries[i].Labels, metric, &samples[j].Timestamp, &samples[j].Value)
 			cmds = append(cmds, cmd)
 		}
 	}
 
 	// TODO: ignore errors for debugging
 	_ = c.rpool.Do(radix.Pipeline(cmds...))
+	c.objPool.Put(args)
+	c.bufferPool.Put(buf)
 
 	return nil
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(l []prompb.Label, buf bytes.Buffer) (*[]string, *string) {
+func metricToLabels(l []prompb.Label, buf *bytes.Buffer) ([]string, string) {
 	var labels = make([]string, 0, len(l))
-	var metric *string
+	var metric string
 	for i := range l {
 		if l[i].Name == nameLabel {
-			metric = &l[i].Value
+			metric = l[i].Value
 		} else {
 			buf.Reset()
 			buf.WriteString(l[i].Name)
@@ -143,15 +171,15 @@ func metricToLabels(l []prompb.Label, buf bytes.Buffer) (*[]string, *string) {
 		}
 	}
 	sort.Strings(labels)
-	return &labels, metric
+	return labels, metric
 }
 
 // We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
-func metricToKeyName(metric *string, labels *[]string, buf bytes.Buffer) (keyName string) {
-	buf.WriteString(*metric)
+func metricToKeyName(metric string, labels []string, buf *bytes.Buffer) (keyName string) {
+	buf.WriteString(metric)
 	buf.WriteString("{")
-	buf.WriteString(strings.Join(*labels, ","))
+	buf.WriteString(strings.Join(labels, ","))
 	buf.WriteString("}")
 	return buf.String()
 }
