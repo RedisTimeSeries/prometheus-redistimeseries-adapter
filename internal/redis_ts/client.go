@@ -148,12 +148,12 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	}
 
 	// TODO: ignore errors for debugging
-	_ = c.rpool.Do(radix.Pipeline(cmds...))
+	err := c.rpool.Do(radix.Pipeline(cmds...))
 	//c.objPool.Put(args)
 	//c.bufferPool.Put(buf)
 	//c.cmdActionSlicePool.Put(cmds)
 
-	return nil
+	return err
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
