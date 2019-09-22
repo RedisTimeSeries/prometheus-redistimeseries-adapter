@@ -96,11 +96,12 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 
 	cmds := make([]radix.CmdAction, 0, len(timeseries))
 	args := make([]string, 0, 100)
+	var buf bytes.Buffer
 	for i := range timeseries {
 		samples := timeseries[i].Samples
 		//var metric interface{}
-		labels, metric := metricToLabels(timeseries[i].Labels)
-		key := metricToKeyName(metric, labels)
+		labels, metric := metricToLabels(timeseries[i].Labels, buf)
+		key := metricToKeyName(metric, labels, buf)
 		if *metric == "" {
 			log.WithFields(log.Fields{"Metric": timeseries[i].Labels}).Info("Cannot send unnamed sample to RedisTS, skipping")
 			continue
@@ -123,10 +124,9 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
-func metricToLabels(l []prompb.Label) (*[]string, *string) {
+func metricToLabels(l []prompb.Label, buf bytes.Buffer) (*[]string, *string) {
 	var labels = make([]string, 0, len(l))
 	var metric *string
-	var buf bytes.Buffer
 	for i := range l {
 		if l[i].Name == nameLabel {
 			metric = &l[i].Value
@@ -144,8 +144,7 @@ func metricToLabels(l []prompb.Label) (*[]string, *string) {
 
 // We add labels to TS key, to keep key unique per labelSet.
 // The form is: <metric_name>{[<tag>="<value>"][,<tag>="<value>"…]}
-func metricToKeyName(metric *string, labels *[]string) (keyName string) {
-	var buf bytes.Buffer
+func metricToKeyName(metric *string, labels *[]string, buf bytes.Buffer) (keyName string) {
 	buf.WriteString(*metric)
 	buf.WriteString("{")
 	buf.WriteString(strings.Join(*labels, ","))
