@@ -86,13 +86,13 @@ func (c *Client) add(args []string, key string, labels []prompb.Label, metric st
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
-	pipe := c.Pipeline()
-	defer func() {
-		err := pipe.Close()
-		if err != nil {
-			returnErr = err
-		}
-	}()
+	//pipe := c.Pipeline()
+	//defer func() {
+	//	err := pipe.Close()
+	//	if err != nil {
+	//		returnErr = err
+	//	}
+	//}()
 
 	cmds := make([]radix.CmdAction, 0, len(timeseries))
 	args := make([]string, 0, 100)
@@ -106,20 +106,20 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 			continue
 		}
 		for j := range samples {
-			sample := &samples[j]
-			if math.IsNaN(sample.Value) || math.IsInf(sample.Value, 0) {
-				log.WithFields(log.Fields{"sample": sample, "value": sample.Value}).Debug("Cannot send to RedisTS, skipping")
+			if math.IsNaN(samples[j].Value) || math.IsInf(samples[j].Value, 0) {
+				log.WithFields(log.Fields{"sample": samples[j], "value": samples[j].Value}).Debug("Cannot send to RedisTS, skipping")
 				continue
 			}
 
-			cmd := c.add(args, key, timeseries[i].Labels, *metric, &sample.Timestamp, &sample.Value)
+			cmd := c.add(args, key, timeseries[i].Labels, *metric, &samples[j].Timestamp, &samples[j].Value)
 			cmds = append(cmds, cmd)
 		}
 	}
 
-	err := c.rpool.Do(radix.Pipeline(cmds...))
+	// TODO: ignore errors for debugging
+	_ := c.rpool.Do(radix.Pipeline(cmds...))
 
-	return err
+	return nil
 }
 
 // Returns labels in string format (key=value), but as slice of interfaces.
