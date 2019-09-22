@@ -41,7 +41,10 @@ func NewClient(address string, auth string) *Client {
 			radix.DialAuthPass(auth),
 		)
 	}
-	rpool, _ := radix.NewPool("tcp", address, 10, radix.PoolConnFunc(customConnFunc))
+	rpool, err := radix.NewPool("tcp", address, 10, radix.PoolConnFunc(customConnFunc))
+	if err != nil {
+		panic(err)
+	}
 	return &Client{
 		Client: *client,
 		Cache:  *cache,
@@ -99,7 +102,8 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	var buf bytes.Buffer
 	for i := range timeseries {
 		samples := timeseries[i].Samples
-		//var metric interface{}
+		cmds = cmds[:0]
+		buf.Reset()
 		labels, metric := metricToLabels(timeseries[i].Labels, buf)
 		key := metricToKeyName(metric, labels, buf)
 		if *metric == "" {
