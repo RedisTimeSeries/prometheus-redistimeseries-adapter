@@ -58,14 +58,14 @@ func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	}
 }
 //
-func Testadd(c *Client, key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
-	return c.add(key, labels, metric, timestamp, value)
+func Testadd(c *Client, args []string, key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
+	return c.add(args, key, labels, metric, timestamp, value)
 }
 
 
-func (c *Client) add(key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
+func (c *Client) add(args []string, key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
 	// TODO: make TS_ADD, LABELS, key and actual labels interface{} cached
-	args := make([]string, 0, len(labels)*2+7)
+	//args := make([]string, 0, len(labels)*2+7)
 	args = append(args, key)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
@@ -95,6 +95,7 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 	}()
 
 	cmds := make([]radix.CmdAction, 0, len(timeseries))
+	args := make([]string, 0, 100)
 	for i := range timeseries {
 		samples := timeseries[i].Samples
 		//var metric interface{}
@@ -111,7 +112,7 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 				continue
 			}
 
-			cmd := c.add(key, timeseries[i].Labels, *metric, &sample.Timestamp, &sample.Value)
+			cmd := c.add(args, key, timeseries[i].Labels, *metric, &sample.Timestamp, &sample.Value)
 			cmds = append(cmds, cmd)
 		}
 	}
