@@ -94,7 +94,7 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 		}
 	}()
 
-	cmds := make([]radix.CmdAction, len(timeseries))
+	cmds := make([]radix.CmdAction, 0, len(timeseries))
 	for i := range timeseries {
 		samples := timeseries[i].Samples
 		//var metric interface{}
