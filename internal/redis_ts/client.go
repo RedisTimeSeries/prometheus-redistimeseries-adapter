@@ -24,7 +24,7 @@ type Client struct {
 type StatusCmd redis.StatusCmd
 
 const nameLabel = "__name__"
-const TS_ADD = "TS_ADD"
+const TS_ADD = "TS.ADD"
 const LABELS = "LABELS"
 
 // NewClient creates a new Client.
