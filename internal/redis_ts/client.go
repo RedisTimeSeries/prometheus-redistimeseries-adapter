@@ -5,17 +5,27 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/prometheus/prometheus/prompb"
+	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
+	radix "github.com/mediocregopher/radix/v3"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
-type Client redis.Client
+type Client struct {
+	redis.Client
+
+	Cache lru.Cache
+	rpool *radix.Pool
+}
 type StatusCmd redis.StatusCmd
 
 const nameLabel = "__name__"
+const TS_ADD = "TS_ADD"
+const LABELS = "LABELS"
 
 // NewClient creates a new Client.
 func NewClient(address string, auth string) *Client {
@@ -24,18 +34,38 @@ func NewClient(address string, auth string) *Client {
 		Password: auth,
 		DB:       0, // use default DB
 	})
-	return (*Client)(client)
+	cache, _ := lru.New(1024)
+	customConnFunc := func(network, addr string) (radix.Conn, error) {
+		return radix.Dial(network, addr,
+			radix.DialTimeout(1 * time.Minute),
+			radix.DialAuthPass(auth),
+		)
+	}
+	rpool, _ := radix.NewPool("tcp", address, 10, radix.PoolConnFunc(customConnFunc))
+	return &Client{
+		Client: *client,
+		Cache:  *cache,
+		rpool: rpool,
+	}
 }
 
 func NewFailoverClient(failoverOpt *redis.FailoverOptions) *Client {
 	client := redis.NewFailoverClient(failoverOpt)
-	return (*Client)(client)
+	cache, _ := lru.New(1024)
+	return &Client{
+		Client: *client,
+		Cache:  *cache,
+	}
+}
+//
+func Testadd(c *Client, key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
+	return c.add(key, labels, metric, timestamp, value)
 }
 
-const TS_ADD = "TS.ADD"
-const LABELS = "LABELS"
-func add(key string, labels []prompb.Label, metric *string, timestamp *int64, value *float64) redis.Cmder {
-	args := make([]interface{}, 0, len(labels)*2+7)
+
+func (c *Client) add(key string, labels []prompb.Label, metric string, timestamp *int64, value *float64) radix.CmdAction {
+	// TODO: make TS_ADD, LABELS, key and actual labels interface{} cached
+	args := make([]string, 0, len(labels)*2+7)
 	args = append(args, TS_ADD, key)
 	args = append(args, strconv.FormatInt(*timestamp, 10))
 	args = append(args, strconv.FormatFloat(*value, 'f', 6, 64))
@@ -48,15 +78,15 @@ func add(key string, labels []prompb.Label, metric *string, timestamp *int64, va
 		}
 	}
 	if !hasNameLabel {
-		args = append(args, nameLabel, *metric)
+		args = append(args, nameLabel, metric)
 	}
-	cmd := redis.NewStringCmd(args...)
+	cmd := radix.Cmd(nil, TS_ADD, args...)
 	return cmd
 }
 
 // Write sends a batch of samples to RedisTS via its HTTP API.
 func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
-	pipe := (*redis.Client)(c).Pipeline()
+	pipe := c.Pipeline()
 	defer func() {
 		err := pipe.Close()
 		if err != nil {
@@ -64,8 +94,10 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 		}
 	}()
 
+	cmds := make([]radix.CmdAction, len(timeseries))
 	for i := range timeseries {
 		samples := timeseries[i].Samples
+		//var metric interface{}
 		labels, metric := metricToLabels(timeseries[i].Labels)
 		key := metricToKeyName(metric, labels)
 		if *metric == "" {
@@ -79,15 +111,13 @@ func (c *Client) Write(timeseries []prompb.TimeSeries) (returnErr error) {
 				continue
 			}
 
-			cmd := add(key, timeseries[i].Labels, metric, &sample.Timestamp, &sample.Value)
-			err := pipe.Process(cmd)
-			if err != nil {
-				return err
-			}
+			cmd := c.add(key, timeseries[i].Labels, *metric, &sample.Timestamp, &sample.Value)
+			cmds = append(cmds, cmd)
 		}
 	}
 
-	_, err := pipe.Exec()
+	err := c.rpool.Do(radix.Pipeline(cmds...))
+
 	return err
 }
 
@@ -125,7 +155,7 @@ func metricToKeyName(metric *string, labels *[]string) (keyName string) {
 func (c *Client) Read(req *prompb.ReadRequest) (returnVal *prompb.ReadResponse, returnErr error) {
 	var timeSeries []*prompb.TimeSeries
 	results := make([]*prompb.QueryResult, 0, len(req.Queries))
-	pipe := (*redis.Client)(c).Pipeline()
+	pipe := c.Pipeline()
 	defer func() {
 		err := pipe.Close()
 		if err != nil {
