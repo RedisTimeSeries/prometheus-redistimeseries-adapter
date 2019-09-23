@@ -45,7 +45,7 @@ func NewClient(address string, auth string) *Client {
 			radix.DialAuthPass(auth),
 		)
 	}
-	rpool, err := radix.NewPool("tcp", address, 10, radix.PoolConnFunc(customConnFunc))
+	rpool, err := radix.NewPool("tcp", address, 10, radix.PoolConnFunc(customConnFunc), radix.PoolPipelineConcurrency(10))
 	if err != nil {
 		panic(err)
 	}
