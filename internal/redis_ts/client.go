@@ -193,6 +193,7 @@ func (c *Client) rangeByLabels(labelMatchers []interface{}, start int64, end int
 	args = append(args, "TS.MRANGE")
 	args = append(args, start)
 	args = append(args, end)
+	args = append(args, "WITHLABELS")
 	args = append(args, "FILTER")
 	args = append(args, labelMatchers...)
 	log.WithFields(log.Fields{"args": args}).Debug("ts.mrange")
