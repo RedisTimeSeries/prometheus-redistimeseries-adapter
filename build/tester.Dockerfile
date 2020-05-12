@@ -1,4 +1,4 @@
-FROM circleci/golang:1.11
+FROM circleci/golang:1.14
 RUN echo /go && git clone -b 5.0 --depth 1 https://github.com/antirez/redis.git
 RUN cd redis && sudo make -j install
 
