@@ -3,10 +3,10 @@ FROM circleci/golang:1.14
 RUN git clone --recursive https://github.com/RedisLabsModules/redis-timeseries.git
 
 RUN set -e ;\
-    cd redis-timeseries ;\
-	sudo make setup ;\
-	sudo ./deps/readies/bin/getredis -v5 --force ;\
-	make build
+    cd  redis-timeseries ;\
+    sudo make setup ;\
+    sudo ./deps/readies/bin/getredis -v5 --force ;\
+    make build
 
 RUN set -e ;\
     echo daemonize yes > /tmp/sentinel.conf ;\

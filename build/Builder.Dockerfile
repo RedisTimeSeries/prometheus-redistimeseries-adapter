@@ -3,13 +3,13 @@ FROM golang:1.14
 WORKDIR /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 RUN mkdir -p /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 
-RUN git clone --recursive https://github.com/RedisLabsModules/redis-timeseries.git
+RUN git clone --recursive https://github.com/RedisLabsModules/redis-timeseries.git /redis/redis-timeseries
 
 RUN set -e ;\
-    cd redis-timeseries ;\
-	sudo make setup ;\
-	sudo ./deps/readies/bin/getredis -v5 --force ;\
-	make build
+    cd /redis/redis-timeseries ;\
+    sudo make setup ;\
+    sudo ./deps/readies/bin/getredis -v5 --force ;\
+    make build
 
 # install linter
 RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.26.0
