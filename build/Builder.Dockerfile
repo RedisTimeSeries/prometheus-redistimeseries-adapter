@@ -3,7 +3,7 @@ FROM golang:1.14
 WORKDIR /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 RUN mkdir -p /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 
-RUN git clone --recursive https://github.com/RedisLabsModules/redis-timeseries.git /redis/redis-timeseries
+RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git /redis/redis-timeseries
 
 RUN set -e ;\
     cd /redis/redis-timeseries ;\

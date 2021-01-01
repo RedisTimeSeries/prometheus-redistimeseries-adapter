@@ -1,9 +1,9 @@
 FROM circleci/golang:1.14
 
-RUN git clone --recursive https://github.com/RedisLabsModules/redis-timeseries.git
+RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git /go/redis-timeseries
 
 RUN set -e ;\
-    cd  redis-timeseries ;\
+    cd  /go/redis-timeseries ;\
     sudo make setup ;\
     sudo ./deps/readies/bin/getredis -v5 --force ;\
     make build
