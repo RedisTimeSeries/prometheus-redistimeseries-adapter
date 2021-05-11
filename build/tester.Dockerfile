@@ -5,7 +5,7 @@ RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git
 RUN set -e ;\
     cd  /go/redis-timeseries ;\
     sudo make setup ;\
-    sudo ./deps/readies/bin/getredis -v5 --force ;\
+    sudo ./deps/readies/bin/getredis -v6 --force ;\
     make build
 
 RUN set -e ;\
