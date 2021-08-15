@@ -1,4 +1,4 @@
-FROM circleci/golang:1.14
+FROM circleci/golang:1.16
 
 RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git /go/redis-timeseries
 
