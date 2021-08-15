@@ -1,6 +1,6 @@
 module github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 
-go 1.14
+go 1.16
 
 require (
 	github.com/go-redis/redis v6.14.2+incompatible
