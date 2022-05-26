@@ -18,8 +18,6 @@ jobs:
 
     # run tests and lint
     - run: make dockerized_test
-    - run: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sudo bash -s -- -b $GOPATH/bin v1.26.0
-    - run: make lint
 
     #run build and store artifact
     - run: make build
