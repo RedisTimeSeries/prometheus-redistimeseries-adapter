@@ -6,12 +6,13 @@ RUN ln -s /usr/local/go/bin/* /usr/local/bin
 RUN go version
 ENV GOPATH /go
 RUN apt update
-RUN apt install -y git
+RUN apt install -y git autotools-dev automake libtool
 RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git /go/redis-timeseries
 WORKDIR /go/redis-timeseries
 RUN ./deps/readies/bin/getpy3
-RUN ./system-setup.py
+RUN ./deps/readies/bin/system-setup.py
 RUN python3 ./deps/readies/bin/getredis -v6 --force
+RUN python3 ./deps/readies/bin/getcmake
 RUN make build
 
 RUN set -e ;\
