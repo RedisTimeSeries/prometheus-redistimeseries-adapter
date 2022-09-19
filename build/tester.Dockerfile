@@ -10,7 +10,7 @@ RUN apt install -y git
 RUN git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git /go/redis-timeseries
 WORKDIR /go/redis-timeseries
 RUN ./deps/readies/bin/getpy3
-RUN ./system-setup.py
+RUN ./sbin/system-setup.py
 RUN python3 ./deps/readies/bin/getredis -v6 --force
 RUN make build
 
