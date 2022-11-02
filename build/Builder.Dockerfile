@@ -1,4 +1,4 @@
-FROM golang:1.17
+FROM golang:1.18.8
 
 WORKDIR /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 RUN mkdir -p /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
