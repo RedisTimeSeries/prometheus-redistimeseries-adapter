@@ -27,7 +27,7 @@ COPY . /go/src/github.com/RedisTimeSeries/prometheus-redistimeseries-adapter
 #ENTRYPOINT /bin/bash
 CMD set -e ;\
     redis-sentinel /tmp/sentinel.conf ;\
-    redis-server --daemonize yes --loadmodule /go/redis-timeseries/bin/redistimeseries.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360 ;\
+    redis-server --daemonize yes --loadmodule /go/redis-timeseries/bin/linux-x64-release/redistimeseries.so RETENTION_POLICY 0 MAX_SAMPLE_PER_CHUNK 360 ;\
     sleep 1 ;\
     redis-cli ping ;\
     make test
