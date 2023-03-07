@@ -10,10 +10,9 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.5.1 // indirect
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/pkg/profile v1.2.1
-	github.com/prometheus/common v0.0.0-20181116084131-1f2c4f3cd6db // indirect
 	github.com/prometheus/prometheus v2.5.0+incompatible
 	github.com/sirupsen/logrus v1.2.0
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a // indirect
+	golang.org/x/net v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20181109154231-b5d43981345b // indirect
 )
