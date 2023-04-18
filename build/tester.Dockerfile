@@ -1,5 +1,5 @@
 FROM circleci/golang:1.16 as go
-FROM ubuntu:bionic
+FROM ubuntu:18.04
 
 COPY --from=go /usr/local/go /usr/local/go
 RUN ln -s /usr/local/go/bin/* /usr/local/bin
